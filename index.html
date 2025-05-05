@@ -31,21 +31,21 @@
     <label>Date</label><input type="text" id="cs-date" readonly>
     <label>Store</label><input type="text" id="cs-store" readonly>
     <h3>Coin Reset Par = $20</h3>
-    <label>Pennies ($0.01 each)</label><input type="number" id="cs-pennies" oninput="recalcClose()">
-    <label>Nickels ($0.05 each)</label><input type="number" id="cs-nickels" oninput="recalcClose()">
-    <label>Dimes ($0.10 each)</label><input type="number" id="cs-dimes" oninput="recalcClose()">
-    <label>Quarters ($0.25 each)</label><input type="number" id="cs-quarters" oninput="recalcClose()">
-    <label>Dollar Coins ($1.00 each)</label><input type="number" id="cs-dollars" oninput="recalcClose()">
+    <label>Pennies ($)</label><input type="number" step="0.01" id="cs-pennies" placeholder="e.g. 1.00" oninput="recalcClose()">
+    <label>Nickels ($)</label><input type="number" step="0.01" id="cs-nickels" placeholder="e.g. 4.00" oninput="recalcClose()">
+    <label>Dimes ($)</label><input type="number" step="0.01" id="cs-dimes" placeholder="e.g. 5.00" oninput="recalcClose()">
+    <label>Quarters ($)</label><input type="number" step="0.01" id="cs-quarters" placeholder="e.g. 10.00" oninput="recalcClose()">
+    <label>Dollar Coins ($)</label><input type="number" step="0.01" id="cs-dollars" placeholder="e.g. 0.00" oninput="recalcClose()">
     <table>
       <thead>
-        <tr><th>Denomination</th><th>Par (count)</th><th>Entered</th><th>Action</th></tr>
+        <tr><th>Denomination</th><th>Par ($)</th><th>Entered ($)</th><th>Action (coins)</th></tr>
       </thead>
       <tbody id="cs-coin-table"></tbody>
     </table>
     <h3>Bills (After $480 removed for Reset Till)</h3>
-    <label>Total Bills</label><input type="number" id="cs-bills" oninput="recalcClose()">
+    <label>Total Bills ($)</label><input type="number" step="0.01" id="cs-bills" oninput="recalcClose()">
     <label>Total Coin Adjustment ($)</label><input type="text" id="cs-coin-adjust" readonly>
-    <label>Closed Shift Drop Total ($)</label><input type="text" id="cs-drop-total" readonly>
+    <label>Total Cash Drop ($)</label><input type="text" id="cs-drop-total" readonly>
   </div>
 
   <!-- DAILY DEPOSIT SECTION -->
@@ -53,16 +53,16 @@
     <h2>Complete Daily Deposit</h2>
     <label>Date</label><input type="text" id="dd-date" readonly>
     <label>Store</label><input type="text" id="dd-store" readonly>
-    <label>Total Tendered</label><input type="number" id="dd-tendered" readonly>
-    <label>Tax Collected (Rounded)</label><input type="number" id="dd-tax" readonly>
-    <label>Change from Change Bag</label><input type="number" id="dd-change" oninput="recalcDaily()">
+    <label>Total Tendered ($)</label><input type="number" step="0.01" id="dd-tendered" readonly>
+    <label>Tax Collected (Rounded) ($)</label><input type="number" id="dd-tax" readonly>
+    <label>Change from Change Bag ($)</label><input type="number" step="0.01" id="dd-change" oninput="recalcDaily()">
     <h3>Vendor Payouts / Bills</h3>
-    <table><thead><tr><th>Vendor</th><th>Amount</th></tr></thead><tbody id="dd-vendors">
-      <tr><td><input type="text" placeholder="Vendor A"></td><td><input type="number" class="dd-vamt" oninput="recalcDaily()"></td></tr>
-      <tr><td><input type="text" placeholder="Vendor B"></td><td><input type="number" class="dd-vamt" oninput="recalcDaily()"></td></tr>
-      <tr><td><input type="text" placeholder="Vendor C"></td><td><input type="number" class="dd-vamt" oninput="recalcDaily()"></td></tr>
-      <tr><td><input type="text" placeholder="Vendor D"></td><td><input type="number" class="dd-vamt" oninput="recalcDaily()"></td></tr>
-      <tr><td><input type="text" placeholder="Vendor E"></td><td><input type="number" class="dd-vamt" oninput="recalcDaily()"></td></tr>
+    <table><thead><tr><th>Vendor</th><th>Amount ($)</th></tr></thead><tbody id="dd-vendors">
+      <tr><td><input type="text" placeholder="Vendor A"></td><td><input type="number" step="0.01" class="dd-vamt" oninput="recalcDaily()"></td></tr>
+      <tr><td><input type="text" placeholder="Vendor B"></td><td><input type="number" step="0.01" class="dd-vamt" oninput="recalcDaily()"></td></tr>
+      <tr><td><input type="text" placeholder="Vendor C"></td><td><input type="number" step="0.01" class="dd-vamt" oninput="recalcDaily()"></td></tr>
+      <tr><td><input type="text" placeholder="Vendor D"></td><td><input type="number" step="0.01" class="dd-vamt" oninput="recalcDaily()"></td></tr>
+      <tr><td><input type="text" placeholder="Vendor E"></td><td><input type="number" step="0.01" class="dd-vamt" oninput="recalcDaily()"></td></tr>
     </tbody></table>
     <label>Notes</label><input type="text" id="dd-notes">
     <div class="preview" id="dd-preview"></div>
@@ -92,35 +92,36 @@
     showClose();
 
     // CLOSE SHIFT LOGIC
-    const parCount = { pennies:1, nickels:4, dimes:5, quarters:10, dollars:0 };
+    const parCount = { pennies:100, nickels:80, dimes:50, quarters:40, dollars:0 };
+    const valuePer = { pennies:0.01, nickels:0.05, dimes:0.10, quarters:0.25, dollars:1.00 };
     function recalcClose(){
-      const entries = {
-        pennies: parseInt(document.getElementById('cs-pennies').value)||0,
-        nickels: parseInt(document.getElementById('cs-nickels').value)||0,
-        dimes:   parseInt(document.getElementById('cs-dimes').value)||0,
-        quarters:parseInt(document.getElementById('cs-quarters').value)||0,
-        dollars: parseInt(document.getElementById('cs-dollars').value)||0
+      // read entered dollar amounts
+      const enteredDol = {
+        pennies: parseFloat(document.getElementById('cs-pennies').value)||0,
+        nickels: parseFloat(document.getElementById('cs-nickels').value)||0,
+        dimes:   parseFloat(document.getElementById('cs-dimes').value)||0,
+        quarters:parseFloat(document.getElementById('cs-quarters').value)||0,
+        dollars: parseFloat(document.getElementById('cs-dollars').value)||0
       };
-      // build table
       let tableHTML = '';
-      let totalValue = 0;
+      let totalCoinsValue = 0;
       for(const denom of ['pennies','nickels','dimes','quarters','dollars']){
-        const entered = entries[denom], par = parCount[denom];
-        const diff = entered - par;
+        const val = enteredDol[denom];
+        const parVal = parCount[denom] * valuePer[denom];
+        const diffCount = Math.round((val - parVal) / valuePer[denom]);
         let action;
-        if(diff===0) action = 'OK';
-        else if(diff>0) action = `Remove ${diff}`;
-        else action = `Add ${Math.abs(diff)}`;
-        const valuePer = { pennies:0.01, nickels:0.05, dimes:0.10, quarters:0.25, dollars:1.00 }[denom];
-        totalValue += entered * valuePer;
-        tableHTML += `<tr><td>${denom.charAt(0).toUpperCase()+denom.slice(1)}</td><td>${par}</td><td>${entered}</td><td>${action}</td></tr>`;
+        if(diffCount === 0) action = 'OK';
+        else if(diffCount > 0) action = `Remove ${diffCount}`;
+        else action = `Add ${Math.abs(diffCount)}`;
+        tableHTML += `<tr><td>${denom.charAt(0).toUpperCase()+denom.slice(1)}</td><td>$${parVal.toFixed(2)}</td><td>$${val.toFixed(2)}</td><td>${action}</td></tr>`;
+        totalCoinsValue += val;
       }
       document.getElementById('cs-coin-table').innerHTML = tableHTML;
-      // coin adjustment
-      const rawAdjust = totalValue - 20;
-      document.getElementById('cs-coin-adjust').value = rawAdjust.toFixed(2);
+      // coins adjustment = totalCoinsValue - 20
+      const coinAdjust = totalCoinsValue - 20;
+      document.getElementById('cs-coin-adjust').value = coinAdjust.toFixed(2);
       const bills = parseFloat(document.getElementById('cs-bills').value)||0;
-      const drop = (bills + Math.max(rawAdjust,0)).toFixed(2);
+      const drop = (bills + Math.max(coinAdjust,0)).toFixed(2);
       document.getElementById('cs-drop-total').value = drop;
     }
 
