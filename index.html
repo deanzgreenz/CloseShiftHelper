@@ -86,20 +86,29 @@
     document.getElementById('dd-tax').value=tax;
     showClose(); // default
 
-    // CLOSE SHIFT LOGIC
+    // CLOSE SHIFT LOGIC with OK/Add/Remove
     const csPar=20;
     function recalcClose(){
-      const pennies = parseFloat(document.getElementById('cs-pennies').value)||0;
-      const nickels = parseFloat(document.getElementById('cs-nickels').value)||0;
-      const dimes   = parseFloat(document.getElementById('cs-dimes').value)||0;
-      const quarters= parseFloat(document.getElementById('cs-quarters').value)||0;
-      const dollars = parseFloat(document.getElementById('cs-dollars').value)||0;
+      const pennies  = parseFloat(document.getElementById('cs-pennies').value)||0;
+      const nickels  = parseFloat(document.getElementById('cs-nickels').value)||0;
+      const dimes    = parseFloat(document.getElementById('cs-dimes').value)||0;
+      const quarters = parseFloat(document.getElementById('cs-quarters').value)||0;
+      const dollars  = parseFloat(document.getElementById('cs-dollars').value)||0;
       const coinsTotal = pennies + nickels + dimes + quarters + dollars;
-      const coinAdjust = (coinsTotal - csPar).toFixed(2);
+      const rawAdjust = coinsTotal - csPar;
+      const coinAdjust = rawAdjust.toFixed(2);
       document.getElementById('cs-coin-adjust').value = coinAdjust;
-      document.getElementById('cs-adjustment').innerHTML = `<strong>Coins to ${coinAdjust>=0?'Deposit':'Remove'}:</strong> $${Math.abs(coinAdjust)}`;
+      let msg;
+      if (Math.abs(rawAdjust) < 0.005) {
+        msg = '<strong>OK</strong> – Par Level';
+      } else if (rawAdjust > 0) {
+        msg = `<strong>Remove</strong> $${rawAdjust.toFixed(2)}`;
+      } else {
+        msg = `<strong>Add</strong> $${Math.abs(rawAdjust).toFixed(2)}`;
+      }
+      document.getElementById('cs-adjustment').innerHTML = msg;
       const bills = parseFloat(document.getElementById('cs-bills').value)||0;
-      const drop = (bills + (coinAdjust>=0?coinAdjust:0)).toFixed(2);
+      const drop = (bills + Math.max(rawAdjust,0)).toFixed(2);
       document.getElementById('cs-drop-total').value = drop;
     }
 
