@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Close Shift Helper</n>  
+  <title>Close Shift Helper</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; }
@@ -89,16 +89,18 @@
     // CLOSE SHIFT LOGIC
     const csPar=20;
     function recalcClose(){
-      const coinsTotal = ['pennies','nickels','dimes','quarters','dollars']
-        .reduce((sum, d) => sum + (parseFloat(document.getElementById(`cs-${d}`).value)||0),0);
-      const diff = (csPar - coinsTotal).toFixed(2);
-      document.getElementById('cs-coin-adjust').value = diff;
-      const depositCoins = Math.max(0, coinsTotal - csPar).toFixed(2);
+      const pennies = parseFloat(document.getElementById('cs-pennies').value)||0;
+      const nickels = parseFloat(document.getElementById('cs-nickels').value)||0;
+      const dimes   = parseFloat(document.getElementById('cs-dimes').value)||0;
+      const quarters= parseFloat(document.getElementById('cs-quarters').value)||0;
+      const dollars = parseFloat(document.getElementById('cs-dollars').value)||0;
+      const coinsTotal = pennies + nickels + dimes + quarters + dollars;
+      const coinAdjust = (coinsTotal - csPar).toFixed(2);
+      document.getElementById('cs-coin-adjust').value = coinAdjust;
+      document.getElementById('cs-adjustment').innerHTML = `<strong>Coins to ${coinAdjust>=0?'Deposit':'Remove'}:</strong> $${Math.abs(coinAdjust)}`;
       const bills = parseFloat(document.getElementById('cs-bills').value)||0;
-      const drop = (bills + parseFloat(depositCoins)).toFixed(2);
+      const drop = (bills + (coinAdjust>=0?coinAdjust:0)).toFixed(2);
       document.getElementById('cs-drop-total').value = drop;
-      document.getElementById('cs-adjustment').innerHTML = `
-        <strong>Coins to Deposit:</strong> $${depositCoins}`;
     }
 
     // DAILY DEPOSIT LOGIC
@@ -106,16 +108,15 @@
       .reduce((a,i)=>a+(parseFloat(i.value)||0),0); }
     function recalcDaily(){
       const netPOS = tender - tax;
-      const vendorNeg = -sumV();
-      const netO = netPOS + vendorNeg;
+      const vendorSum = sumV();
+      const netO = netPOS - vendorSum;
       const change = parseFloat(document.getElementById('dd-change').value)||0;
-      const actual = change;
-      const diff = (actual - netO).toFixed(2);
+      const diff = (change - netO).toFixed(2);
       document.getElementById('dd-preview').innerHTML = `
         Net from POS:   $${netPOS.toFixed(2)}<br>
-        Vendor Totals:  $${vendorNeg.toFixed(2)}<br>
+        Bills Paid:     $${vendorSum.toFixed(2)}<br>
         Net Owed:       $${netO.toFixed(2)}<br>
-        Cash from Bag:  $${actual.toFixed(2)}<br>
+        Cash from Bag:  $${change.toFixed(2)}<br>
         Discrepancy:    $${diff}`;
     }
     recalcDaily();
@@ -123,9 +124,10 @@
     // DOWNLOAD DAILY
     function downloadDaily(){
       const ws_data = [
-        ['Date','Store','Net POS','Vendor Payouts','Net Owed','Cash from Bag','Discrepancy'],
-        [today,store,(tender-tax).toFixed(2),(-sumV()).toFixed(2),((tender-tax)-sumV()).toFixed(2),
-         document.getElementById('dd-change').value||0, (parseFloat(document.getElementById('dd-change').value)||0 - ((tender-tax)-sumV())).toFixed(2)]
+        ['Date','Store','Net POS','Bills Paid','Net Owed','Cash from Bag','Discrepancy'],
+        [today,store,(tender-tax).toFixed(2),sumV().toFixed(2),((tender-tax)-sumV()).toFixed(2),
+         (parseFloat(document.getElementById('dd-change').value)||0).toFixed(2),
+         ((parseFloat(document.getElementById('dd-change').value)||0)-((tender-tax)-sumV())).toFixed(2)]
       ];
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ws_data),'Deposit');
