@@ -1,0 +1,113 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Close Shift Helper</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 2rem; max-width: 800px; margin: auto; }
+    h1 { margin-bottom: 1rem; }
+    label { display: block; margin: 0.5rem 0 0.2rem; }
+    input[type='number'], input[type='text'] { width: 100%; padding: 0.5rem; margin-bottom: 1rem; }
+    table { width: 100%; margin-top: 1rem; border-collapse: collapse; }
+    td, th { border: 1px solid #ccc; padding: 0.5rem; text-align: center; }
+    .section { margin-bottom: 2rem; }
+    button { padding: 0.75rem 1.5rem; font-size: 1rem; }
+  </style>
+</head>
+<body>
+  <h1>Close Shift - Daily Deposit Sheet</h1>
+
+  <div class="section">
+    <label>Date</label>
+    <input type="text" id="date" readonly>
+    <label>Store</label>
+    <input type="text" id="store" readonly>
+    <label>Total Tendered</label>
+    <input type="number" id="tendered" step="0.01" readonly>
+    <label>Tax Collected (Rounded)</label>
+    <input type="number" id="tax" step="1" readonly>
+  </div>
+
+  <div class="section">
+    <h2>Till Flipper</h2>
+    <label>Drop Total (Cash counted after float removed)</label>
+    <input type="number" id="dropTotal" step="0.01">
+    <label>Coin Adjustment (To get to $20 in coins)</label>
+    <input type="number" id="coinAdjustment" step="0.01">
+  </div>
+
+  <div class="section">
+    <h2>Vendor Payouts / Bills</h2>
+    <table>
+      <thead><tr><th>Vendor Name</th><th>Amount</th></tr></thead>
+      <tbody id="vendorTable">
+        <tr><td><input type="text" placeholder="Vendor A"></td><td><input type="number" step="0.01"></td></tr>
+        <tr><td><input type="text" placeholder="Vendor B"></td><td><input type="number" step="0.01"></td></tr>
+        <tr><td><input type="text" placeholder="Vendor C"></td><td><input type="number" step="0.01"></td></tr>
+        <tr><td><input type="text" placeholder="Vendor D"></td><td><input type="number" step="0.01"></td></tr>
+        <tr><td><input type="text" placeholder="Vendor E"></td><td><input type="number" step="0.01"></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <label>Change from the change bag</label>
+    <input type="number" id="changeFromBag" step="0.01">
+    <label>Notes</label>
+    <input type="text" id="notes">
+  </div>
+
+  <div class="section">
+    <button onclick="downloadSheet()">Save Daily Deposit Sheet</button>
+  </div>
+
+  <script>
+    // Auto-fill date
+    document.getElementById('date').value = new Date().toISOString().split('T')[0];
+
+    // Placeholder for scraped data - can be populated via bookmarklet
+    const params = new URLSearchParams(window.location.search);
+    document.getElementById('store').value = params.get('store') || "Sandy";
+    document.getElementById('tendered').value = params.get('tendered') || 0;
+    document.getElementById('tax').value = params.get('tax') || 0;
+
+    function downloadSheet() {
+      const date = document.getElementById('date').value;
+      const store = document.getElementById('store').value;
+      const tendered = parseFloat(document.getElementById('tendered').value) || 0;
+      const tax = parseInt(document.getElementById('tax').value) || 0;
+      const coinAdjustment = parseFloat(document.getElementById('coinAdjustment').value) || 0;
+      const dropTotal = parseFloat(document.getElementById('dropTotal').value) || 0;
+      const changeFromBag = parseFloat(document.getElementById('changeFromBag').value) || 0;
+      const notes = document.getElementById('notes').value || "";
+
+      const vendors = Array.from(document.querySelectorAll('#vendorTable tr')).map(row => {
+        const name = row.cells[0].querySelector('input').value.trim();
+        const amount = parseFloat(row.cells[1].querySelector('input').value) || 0;
+        return name ? [name, amount] : null;
+      }).filter(Boolean);
+
+      const discrepancy = (tendered - dropTotal - vendors.reduce((sum, v) => sum + v[1], 0)).toFixed(2);
+
+      const ws_data = [
+        ["Date", "Store", "Total Tendered", "Tax", "Coin Adjustment", "Drop Total"],
+        [date, store, tendered, tax, coinAdjustment, dropTotal],
+        [],
+        ["Vendor Payouts / Bills"],
+        ...vendors.map(([name, amt]) => [name, amt]),
+        [],
+        ["Change from Bag", changeFromBag],
+        ["Notes", notes],
+        ["Discrepancy", discrepancy]
+      ];
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(ws_data);
+      XLSX.utils.book_append_sheet(wb, ws, "Deposit");
+      XLSX.writeFile(wb, `${date} - ${store}.xlsx`);
+    }
+  </script>
+</body>
+</html>
