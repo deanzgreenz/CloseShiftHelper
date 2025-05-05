@@ -31,16 +31,21 @@
     <label>Date</label><input type="text" id="cs-date" readonly>
     <label>Store</label><input type="text" id="cs-store" readonly>
     <h3>Coin Reset Par = $20</h3>
-    <label>Pennies</label><input type="number" id="cs-pennies" oninput="recalcClose()">
-    <label>Nickels</label><input type="number" id="cs-nickels" oninput="recalcClose()">
-    <label>Dimes</label><input type="number" id="cs-dimes" oninput="recalcClose()">
-    <label>Quarters</label><input type="number" id="cs-quarters" oninput="recalcClose()">
-    <label>Dollar Coins</label><input type="number" id="cs-dollars" oninput="recalcClose()">
-    <div id="cs-adjustment"></div>
+    <label>Pennies ($0.01 each)</label><input type="number" id="cs-pennies" oninput="recalcClose()">
+    <label>Nickels ($0.05 each)</label><input type="number" id="cs-nickels" oninput="recalcClose()">
+    <label>Dimes ($0.10 each)</label><input type="number" id="cs-dimes" oninput="recalcClose()">
+    <label>Quarters ($0.25 each)</label><input type="number" id="cs-quarters" oninput="recalcClose()">
+    <label>Dollar Coins ($1.00 each)</label><input type="number" id="cs-dollars" oninput="recalcClose()">
+    <table>
+      <thead>
+        <tr><th>Denomination</th><th>Par (count)</th><th>Entered</th><th>Action</th></tr>
+      </thead>
+      <tbody id="cs-coin-table"></tbody>
+    </table>
     <h3>Bills (After $480 removed for Reset Till)</h3>
     <label>Total Bills</label><input type="number" id="cs-bills" oninput="recalcClose()">
-    <label>Total Coin Adjustment</label><input type="text" id="cs-coin-adjust" readonly>
-    <label>Closed Shift Drop Total</label><input type="text" id="cs-drop-total" readonly>
+    <label>Total Coin Adjustment ($)</label><input type="text" id="cs-coin-adjust" readonly>
+    <label>Closed Shift Drop Total ($)</label><input type="text" id="cs-drop-total" readonly>
   </div>
 
   <!-- DAILY DEPOSIT SECTION -->
@@ -74,7 +79,7 @@
     function showDaily(){ secDaily.classList.add('active'); secClose.classList.remove('active'); }
     tabClose.onclick=showClose; tabDaily.onclick=showDaily;
 
-    // INITIALIZE URL PARAMS + DATE/STORE
+    // URL PARAMS + INIT
     const params = new URLSearchParams(window.location.search);
     const store = params.get('store')||'Unknown';
     const tender = parseFloat(params.get('tendered'))||0;
@@ -84,35 +89,42 @@
     ['cs-store','dd-store'].forEach(id=>document.getElementById(id).value=store);
     document.getElementById('dd-tendered').value=tender.toFixed(2);
     document.getElementById('dd-tax').value=tax;
-    showClose(); // default
+    showClose();
 
-    // CLOSE SHIFT LOGIC with OK/Add/Remove
-    const csPar=20;
+    // CLOSE SHIFT LOGIC
+    const parCount = { pennies:1, nickels:4, dimes:5, quarters:10, dollars:0 };
     function recalcClose(){
-      const pennies  = parseFloat(document.getElementById('cs-pennies').value)||0;
-      const nickels  = parseFloat(document.getElementById('cs-nickels').value)||0;
-      const dimes    = parseFloat(document.getElementById('cs-dimes').value)||0;
-      const quarters = parseFloat(document.getElementById('cs-quarters').value)||0;
-      const dollars  = parseFloat(document.getElementById('cs-dollars').value)||0;
-      const coinsTotal = pennies + nickels + dimes + quarters + dollars;
-      const rawAdjust = coinsTotal - csPar;
-      const coinAdjust = rawAdjust.toFixed(2);
-      document.getElementById('cs-coin-adjust').value = coinAdjust;
-      let msg;
-      if (Math.abs(rawAdjust) < 0.005) {
-        msg = '<strong>OK</strong> – Par Level';
-      } else if (rawAdjust > 0) {
-        msg = `<strong>Remove</strong> $${rawAdjust.toFixed(2)}`;
-      } else {
-        msg = `<strong>Add</strong> $${Math.abs(rawAdjust).toFixed(2)}`;
+      const entries = {
+        pennies: parseInt(document.getElementById('cs-pennies').value)||0,
+        nickels: parseInt(document.getElementById('cs-nickels').value)||0,
+        dimes:   parseInt(document.getElementById('cs-dimes').value)||0,
+        quarters:parseInt(document.getElementById('cs-quarters').value)||0,
+        dollars: parseInt(document.getElementById('cs-dollars').value)||0
+      };
+      // build table
+      let tableHTML = '';
+      let totalValue = 0;
+      for(const denom of ['pennies','nickels','dimes','quarters','dollars']){
+        const entered = entries[denom], par = parCount[denom];
+        const diff = entered - par;
+        let action;
+        if(diff===0) action = 'OK';
+        else if(diff>0) action = `Remove ${diff}`;
+        else action = `Add ${Math.abs(diff)}`;
+        const valuePer = { pennies:0.01, nickels:0.05, dimes:0.10, quarters:0.25, dollars:1.00 }[denom];
+        totalValue += entered * valuePer;
+        tableHTML += `<tr><td>${denom.charAt(0).toUpperCase()+denom.slice(1)}</td><td>${par}</td><td>${entered}</td><td>${action}</td></tr>`;
       }
-      document.getElementById('cs-adjustment').innerHTML = msg;
+      document.getElementById('cs-coin-table').innerHTML = tableHTML;
+      // coin adjustment
+      const rawAdjust = totalValue - 20;
+      document.getElementById('cs-coin-adjust').value = rawAdjust.toFixed(2);
       const bills = parseFloat(document.getElementById('cs-bills').value)||0;
       const drop = (bills + Math.max(rawAdjust,0)).toFixed(2);
       document.getElementById('cs-drop-total').value = drop;
     }
 
-    // DAILY DEPOSIT LOGIC
+    // DAILY DEPOSIT
     function sumV(){ return Array.from(document.getElementsByClassName('dd-vamt'))
       .reduce((a,i)=>a+(parseFloat(i.value)||0),0); }
     function recalcDaily(){
@@ -121,12 +133,12 @@
       const netO = netPOS - vendorSum;
       const change = parseFloat(document.getElementById('dd-change').value)||0;
       const diff = (change - netO).toFixed(2);
-      document.getElementById('dd-preview').innerHTML = `
-        Net from POS:   $${netPOS.toFixed(2)}<br>
-        Bills Paid:     $${vendorSum.toFixed(2)}<br>
-        Net Owed:       $${netO.toFixed(2)}<br>
-        Cash from Bag:  $${change.toFixed(2)}<br>
-        Discrepancy:    $${diff}`;
+      document.getElementById('dd-preview').innerHTML =
+        `Net from POS:   $${netPOS.toFixed(2)}<br>
+         Bills Paid:     $${vendorSum.toFixed(2)}<br>
+         Net Owed:       $${netO.toFixed(2)}<br>
+         Cash from Bag:  $${change.toFixed(2)}<br>
+         Discrepancy:    $${diff}`;
     }
     recalcDaily();
 
