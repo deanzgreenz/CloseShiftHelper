@@ -34,20 +34,20 @@
   <div class="section">
     <h2>Till Flipper</h2>
     <h4>Coins</h4>
-    <label>Pennies</label><input type="number" id="pennies" oninput="calculateTill()">
-    <label>Nickels</label><input type="number" id="nickels" oninput="calculateTill()">
-    <label>Dimes</label><input type="number" id="dimes" oninput="calculateTill()">
-    <label>Quarters</label><input type="number" id="quarters" oninput="calculateTill()">
-    <label>Dollar Coins</label><input type="number" id="dollars" oninput="calculateTill()">
+    <label>Pennies ($1 par)</label><input type="number" id="pennies" oninput="recalcAll()">
+    <label>Nickels ($4 par)</label><input type="number" id="nickels" oninput="recalcAll()">
+    <label>Dimes ($5 par)</label><input type="number" id="dimes" oninput="recalcAll()">
+    <label>Quarters ($10 par)</label><input type="number" id="quarters" oninput="recalcAll()">
+    <label>Dollar Coins ($0 par)</label><input type="number" id="dollars" oninput="recalcAll()">
     <div id="coinAdjustments"></div>
 
     <h4>Bills (After $480 removed for Reset Till)</h4>
-    <label>Total Bills</label><input type="number" id="totalBills" oninput="calculateTill()">
+    <label>Total Bills</label><input type="number" id="input-bills" step="0.01" oninput="recalcAll()">
 
     <label>Total Cash Drop</label>
-    <input type="number" id="dropTotal" step="0.01" readonly>
+    <input type="number" id="actual-deposit" step="0.01" readonly>
     <label>Total Coins</label>
-    <input type="number" id="coinAdjustment" step="0.01" readonly>
+    <input type="number" id="total-coins" step="0.01" readonly>
   </div>
 
   <div class="section">
@@ -55,11 +55,11 @@
     <table>
       <thead><tr><th>Vendor Name</th><th>Amount</th></tr></thead>
       <tbody id="vendorTable">
-        <tr><td><input type="text" placeholder="Vendor A"></td><td><input type="number" step="0.01"></td></tr>
-        <tr><td><input type="text" placeholder="Vendor B"></td><td><input type="number" step="0.01"></td></tr>
-        <tr><td><input type="text" placeholder="Vendor C"></td><td><input type="number" step="0.01"></td></tr>
-        <tr><td><input type="text" placeholder="Vendor D"></td><td><input type="number" step="0.01"></td></tr>
-        <tr><td><input type="text" placeholder="Vendor E"></td><td><input type="number" step="0.01"></td></tr>
+        <tr><td><input type="text" placeholder="Vendor A"></td><td><input type="number" class="vendor-amount" step="0.01"></td></tr>
+        <tr><td><input type="text" placeholder="Vendor B"></td><td><input type="number" class="vendor-amount" step="0.01"></td></tr>
+        <tr><td><input type="text" placeholder="Vendor C"></td><td><input type="number" class="vendor-amount" step="0.01"></td></tr>
+        <tr><td><input type="text" placeholder="Vendor D"></td><td><input type="number" class="vendor-amount" step="0.01"></td></tr>
+        <tr><td><input type="text" placeholder="Vendor E"></td><td><input type="number" class="vendor-amount" step="0.01"></td></tr>
       </tbody>
     </table>
   </div>
@@ -81,119 +81,128 @@
   </div>
 
   <script>
+    // initialize fields from URL or defaults
     document.getElementById('date').value = new Date().toISOString().split('T')[0];
     const params = new URLSearchParams(window.location.search);
-    document.getElementById('store').value = params.get('store') || "Sandy";
-    document.getElementById('tendered').value = params.get('tendered') || 0;
-    document.getElementById('tax').value = params.get('tax') || 0;
+    const scrapedTendered = parseFloat(params.get('tendered')) || 0;
+    const scrapedTax      = parseInt(params.get('tax')) || 0;
+    document.getElementById('store').value    = params.get('store') || 'Sandy';
+    document.getElementById('tendered').value = scrapedTendered.toFixed(2);
+    document.getElementById('tax').value      = scrapedTax;
 
-    function calculateTill() {
-      const floatAmount = 200;
-      const coinPar = {
-        pennies: 1.00,
-        nickels: 4.00,
-        dimes: 5.00,
-        quarters: 10.00,
-        dollars: 0.00
-      };
+    // vendor payout inputs
+    const vendorInputs = Array.from(document.querySelectorAll('.vendor-amount'));
 
+    function sumVendors() {
+      return vendorInputs.reduce((sum, input) => sum + (parseFloat(input.value)||0), 0);
+    }
+
+    // 1) Net from POS: F18 = F16 - F17
+    function netFromPOS() {
+      return scrapedTendered - scrapedTax;
+    }
+
+    // 2) Vendor payouts negative: F19 = -SUM(vendors)
+    function vendorPayoutsNegative() {
+      return -sumVendors();
+    }
+
+    // 3) Net deposit owed: F20 = F18 + F19
+    function netDepositOwed() {
+      return netFromPOS() + vendorPayoutsNegative();
+    }
+
+    // coin par values
+    const coinPar = { pennies:1.00, nickels:4.00, dimes:5.00, quarters:10.00, dollars:0.00 };
+
+    function recalcAll() {
+      // coin totals & adjustments
       const coins = {
-        pennies: parseFloat(document.getElementById('pennies').value) || 0,
-        nickels: parseFloat(document.getElementById('nickels').value) || 0,
-        dimes: parseFloat(document.getElementById('dimes').value) || 0,
-        quarters: parseFloat(document.getElementById('quarters').value) || 0,
-        dollars: parseFloat(document.getElementById('dollars').value) || 0
+        pennies : parseFloat(document.getElementById('pennies').value)||0,
+        nickels : parseFloat(document.getElementById('nickels').value)||0,
+        dimes   : parseFloat(document.getElementById('dimes').value)||0,
+        quarters: parseFloat(document.getElementById('quarters').value)||0,
+        dollars : parseFloat(document.getElementById('dollars').value)||0
       };
-
-      const adjustments = {};
       let coinTotal = 0;
-
+      let adjustmentsHtml = '<table><tr><th>Denomination</th><th>Adjustment</th></tr>';
       for (let denom in coins) {
-        coinTotal += coins[denom];
-        const diff = (coinPar[denom] - coins[denom]).toFixed(2);
-        if (Math.abs(diff) >= 0.01) {
-          adjustments[denom] = diff > 0 ? `Add $${diff}` : `Remove $${Math.abs(diff)}`;
-        } else {
-          adjustments[denom] = "OK";
-        }
+        const entered = coins[denom];
+        coinTotal += entered;
+        const diff = (coinPar[denom] - entered).toFixed(2);
+        let adj;
+        if (Math.abs(diff) < 0.01) adj = 'OK';
+        else if (diff > 0) adj = `Add $${diff}`;
+        else adj = `Remove $${Math.abs(diff)}`;
+        adjustmentsHtml += `<tr><td>${denom.charAt(0).toUpperCase()+denom.slice(1)}</td><td>${adj}</td></tr>`;
       }
+      adjustmentsHtml += '</table>';
+      document.getElementById('coinAdjustments').innerHTML = adjustmentsHtml;
+      document.getElementById('total-coins').value = coinTotal.toFixed(2);
 
-      const bills = parseFloat(document.getElementById('totalBills').value) || 0;
+      // bills & drop
+      const bills = parseFloat(document.getElementById('input-bills').value)||0;
       const totalCash = coinTotal + bills;
-      const drop = (totalCash - floatAmount).toFixed(2);
-
-      document.getElementById('dropTotal').value = drop;
-      document.getElementById('coinAdjustment').value = coinTotal.toFixed(2);
-
-      let output = '<table><tr><th>Denomination</th><th>Adjustment</th></tr>';
-      for (let d in adjustments) {
-        output += `<tr><td>${d.charAt(0).toUpperCase() + d.slice(1)}</td><td>${adjustments[d]}</td></tr>`;
-      }
-      output += '</table>';
-      document.getElementById('coinAdjustments').innerHTML = output;
+      document.getElementById('actual-deposit').value = (totalCash - 200).toFixed(2); // float=200
 
       updatePreview();
     }
 
-    function downloadSheet() {
-      const date = document.getElementById('date').value;
-      const store = document.getElementById('store').value;
-      const tendered = parseFloat(document.getElementById('tendered').value) || 0;
-      const tax = parseInt(document.getElementById('tax').value) || 0;
-      const coinAdjustment = parseFloat(document.getElementById('coinAdjustment').value) || 0;
-      const dropTotal = parseFloat(document.getElementById('dropTotal').value) || 0;
-      const changeFromBag = parseFloat(document.getElementById('changeFromBag').value) || 0;
-      const notes = document.getElementById('notes').value || "";
-
-      const vendors = Array.from(document.querySelectorAll('#vendorTable tr')).map(row => {
-        const name = row.cells[0].querySelector('input').value.trim();
-        const amount = parseFloat(row.cells[1].querySelector('input').value) || 0;
-        return name ? [name, amount] : null;
-      }).filter(Boolean);
-
-      const vendorTotal = vendors.reduce((sum, v) => sum + v[1], 0);
-      const discrepancy = (tendered - dropTotal - vendorTotal).toFixed(2);
-
-      const ws_data = [
-        ["Date", "Store", "Total Tendered", "Tax", "Coin Adjustment", "Drop Total"],
-        [date, store, tendered, tax, coinAdjustment, dropTotal],
-        [],
-        ["Vendor Payouts / Bills"],
-        ...vendors.map(([name, amt]) => [name, amt]),
-        [],
-        ["Change from Bag", changeFromBag],
-        ["Notes", notes],
-        ["Discrepancy", discrepancy]
-      ];
-
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.aoa_to_sheet(ws_data);
-      XLSX.utils.book_append_sheet(wb, ws, "Deposit");
-      XLSX.writeFile(wb, `${date} - ${store}.xlsx`);
-    }
-
-    const inputs = document.querySelectorAll("input");
-    inputs.forEach(input => input.addEventListener("input", updatePreview));
-
     function updatePreview() {
-      const tendered = parseFloat(document.getElementById('tendered').value) || 0;
-      const dropTotal = parseFloat(document.getElementById('dropTotal').value) || 0;
-      const vendors = Array.from(document.querySelectorAll('#vendorTable tr')).map(row => {
-        const name = row.cells[0].querySelector('input').value.trim();
-        const amount = parseFloat(row.cells[1].querySelector('input').value) || 0;
-        return name ? [name, amount] : null;
-      }).filter(Boolean);
-      const vendorTotal = vendors.reduce((sum, v) => sum + v[1], 0);
-      const discrepancy = (tendered - dropTotal - vendorTotal).toFixed(2);
-      const warning = Math.abs(discrepancy) > 1 ? "<span class='discrepancy-warning'>⚠ Discrepancy: $" + discrepancy + "</span>" : "Discrepancy: $" + discrepancy;
+      const netPos       = netFromPOS().toFixed(2);
+      const vendorNeg    = vendorPayoutsNegative().toFixed(2);
+      const netOwed      = netDepositOwed().toFixed(2);
+      const actualDep    = parseFloat(document.getElementById('actual-deposit').value)||0;
+      const disc         = (actualDep - netDepositOwed()).toFixed(2);
+      const warning      = (Math.abs(disc)>0.01)
+                          ? `<span class='discrepancy-warning'>⚠ Discrepancy: $${disc}</span>`
+                          : `Discrepancy: $${disc}`;
       document.getElementById('preview').innerHTML = `
         Store: ${document.getElementById('store').value}<br>
-        Date: ${document.getElementById('date').value}<br>
-        Total Tendered: $${tendered}<br>
-        Total Cash Drop: $${dropTotal}<br>
-        Vendor Payout Total: $${vendorTotal.toFixed(2)}<br>
+        Date:  ${document.getElementById('date').value}<br>
+        Net from POS:     $${netPos}<br>
+        Vendor Payouts:   $${vendorNeg}<br>
+        Net Deposit Owed: $${netOwed}<br>
+        Actual Deposit:   $${actualDep.toFixed(2)}<br>
         ${warning}`;
     }
+
+    // download as XLSX
+    function downloadSheet() {
+      const date   = document.getElementById('date').value;
+      const store  = document.getElementById('store').value;
+      const vendors = Array.from(document.querySelectorAll('#vendorTable tr')).map(r=>{
+        const n=r.cells[0].querySelector('input').value.trim();
+        const a=parseFloat(r.cells[1].querySelector('input').value)||0;
+        return n?[n,a]:null;
+      }).filter(Boolean);
+      const changeBag = parseFloat(document.getElementById('changeFromBag').value)||0;
+      const notes     = document.getElementById('notes').value || '';
+      const row1=[['Date','Store','Tendered','Tax','Net POS','Vendor Payouts','Net Owed','Bills','Coins','Actual Drop']];
+      const vals1=[[
+        date,store,scrapedTendered,scrapedTax,
+        netFromPOS(),sumVendors()*-1,netDepositOwed(),
+        parseFloat(document.getElementById('input-bills').value)||0,
+        parseFloat(document.getElementById('total-coins').value)||0,
+        parseFloat(document.getElementById('actual-deposit').value)||0
+      ]];
+      const vendorRows = [['Vendor','Amount'],...vendors];
+      const notesRows  = [['Change from Bag',changeBag],['Notes',notes]];
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,
+        XLSX.utils.aoa_to_sheet([].concat(row1,vals1,[[]],vendorRows,[[]],notesRows))
+        ,'Deposit');
+      XLSX.writeFile(wb,`${date} - ${store}.xlsx`);
+    }
+
+    // bind events
+    vendorInputs.forEach(i=>i.addEventListener('input', recalcAll));
+    ['pennies','nickels','dimes','quarters','dollars','input-bills'].forEach(id=>{
+      document.getElementById(id).addEventListener('input', recalcAll);
+    });
+
+    // initial calc
+    recalcAll();
   </script>
 </body>
 </html>
