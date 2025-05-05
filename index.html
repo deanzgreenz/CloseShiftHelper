@@ -2,208 +2,135 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Close Shift Helper</title>
+  <title>Close Shift Helper</n>  
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
-    body { font-family: sans-serif; padding: 2rem; max-width: 800px; margin: auto; }
-    h1 { margin-bottom: 1rem; }
+    body { font-family: sans-serif; max-width: 800px; margin: 2rem auto; }
+    .tabs { margin-bottom: 1rem; }
+    .tabs button { padding: 0.5rem 1rem; margin-right: 0.5rem; }
+    .section { display: none; }
+    .section.active { display: block; }
     label { display: block; margin: 0.5rem 0 0.2rem; }
-    input[type='number'], input[type='text'] { width: 100%; padding: 0.5rem; margin-bottom: 1rem; }
-    table { width: 100%; margin-top: 1rem; border-collapse: collapse; }
-    td, th { border: 1px solid #ccc; padding: 0.5rem; text-align: center; }
-    .section { margin-bottom: 2rem; }
-    button { padding: 0.75rem 1.5rem; font-size: 1rem; }
-    .discrepancy-warning { color: red; font-weight: bold; }
-    .preview-box { background: #f9f9f9; border: 1px solid #ccc; padding: 1rem; margin-top: 1rem; font-family: monospace; }
+    input, select { width: 100%; padding: 0.5rem; margin-bottom: 1rem; }
+    table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+    th, td { border: 1px solid #ccc; padding: 0.5rem; text-align: center; }
+    .preview { background: #f9f9f9; border: 1px solid #ccc; padding: 1rem; font-family: monospace; }
+    button.save { padding: 0.75rem 1.5rem; font-size: 1rem; }
   </style>
 </head>
 <body>
-  <h1>Close Shift - Daily Deposit Sheet</h1>
-
-  <div class="section">
-    <label>Date</label>
-    <input type="text" id="date" readonly>
-    <label>Store</label>
-    <input type="text" id="store" readonly>
-    <label>Total Tendered</label>
-    <input type="number" id="tendered" step="0.01" readonly>
-    <label>Tax Collected (Rounded)</label>
-    <input type="number" id="tax" step="1" readonly>
+  <h1>Close Shift Helper</h1>
+  <div class="tabs">
+    <button id="tab-close">Close Shift</button>
+    <button id="tab-daily">Complete Daily Deposit</button>
   </div>
 
-  <div class="section">
-    <h2>Till Flipper</h2>
-    <h4>Coins</h4>
-    <label>Pennies ($1 par)</label><input type="number" id="pennies" oninput="recalcAll()">
-    <label>Nickels ($4 par)</label><input type="number" id="nickels" oninput="recalcAll()">
-    <label>Dimes ($5 par)</label><input type="number" id="dimes" oninput="recalcAll()">
-    <label>Quarters ($10 par)</label><input type="number" id="quarters" oninput="recalcAll()">
-    <label>Dollar Coins ($0 par)</label><input type="number" id="dollars" oninput="recalcAll()">
-    <div id="coinAdjustments"></div>
-
-    <h4>Bills (After $480 removed for Reset Till)</h4>
-    <label>Total Bills</label><input type="number" id="input-bills" step="0.01" oninput="recalcAll()">
-
-    <label>Total Cash Drop</label>
-    <input type="number" id="actual-deposit" step="0.01" readonly>
-    <label>Total Coins</label>
-    <input type="number" id="total-coins" step="0.01" readonly>
+  <!-- CLOSE SHIFT SECTION -->
+  <div id="close-section" class="section">
+    <h2>Close Shift</h2>
+    <label>Date</label><input type="text" id="cs-date" readonly>
+    <label>Store</label><input type="text" id="cs-store" readonly>
+    <h3>Coin Reset Par = $20</h3>
+    <label>Pennies</label><input type="number" id="cs-pennies" oninput="recalcClose()">
+    <label>Nickels</label><input type="number" id="cs-nickels" oninput="recalcClose()">
+    <label>Dimes</label><input type="number" id="cs-dimes" oninput="recalcClose()">
+    <label>Quarters</label><input type="number" id="cs-quarters" oninput="recalcClose()">
+    <label>Dollar Coins</label><input type="number" id="cs-dollars" oninput="recalcClose()">
+    <div id="cs-adjustment"></div>
+    <h3>Bills (After $480 removed for Reset Till)</h3>
+    <label>Total Bills</label><input type="number" id="cs-bills" oninput="recalcClose()">
+    <label>Total Coin Adjustment</label><input type="text" id="cs-coin-adjust" readonly>
+    <label>Closed Shift Drop Total</label><input type="text" id="cs-drop-total" readonly>
   </div>
 
-  <div class="section">
-    <h2>Vendor Payouts / Bills</h2>
-    <table>
-      <thead><tr><th>Vendor Name</th><th>Amount</th></tr></thead>
-      <tbody id="vendorTable">
-        <tr><td><input type="text" placeholder="Vendor A"></td><td><input type="number" class="vendor-amount" step="0.01"></td></tr>
-        <tr><td><input type="text" placeholder="Vendor B"></td><td><input type="number" class="vendor-amount" step="0.01"></td></tr>
-        <tr><td><input type="text" placeholder="Vendor C"></td><td><input type="number" class="vendor-amount" step="0.01"></td></tr>
-        <tr><td><input type="text" placeholder="Vendor D"></td><td><input type="number" class="vendor-amount" step="0.01"></td></tr>
-        <tr><td><input type="text" placeholder="Vendor E"></td><td><input type="number" class="vendor-amount" step="0.01"></td></tr>
-      </tbody>
-    </table>
-  </div>
-
-  <div class="section">
-    <label>Change from the change bag</label>
-    <input type="number" id="changeFromBag" step="0.01">
-    <label>Notes</label>
-    <input type="text" id="notes">
-  </div>
-
-  <div class="section">
-    <h2>Preview</h2>
-    <div id="preview" class="preview-box"></div>
-  </div>
-
-  <div class="section">
-    <button onclick="downloadSheet()">Save Daily Deposit Sheet</button>
+  <!-- DAILY DEPOSIT SECTION -->
+  <div id="daily-section" class="section">
+    <h2>Complete Daily Deposit</h2>
+    <label>Date</label><input type="text" id="dd-date" readonly>
+    <label>Store</label><input type="text" id="dd-store" readonly>
+    <label>Total Tendered</label><input type="number" id="dd-tendered" readonly>
+    <label>Tax Collected (Rounded)</label><input type="number" id="dd-tax" readonly>
+    <label>Change from Change Bag</label><input type="number" id="dd-change" oninput="recalcDaily()">
+    <h3>Vendor Payouts / Bills</h3>
+    <table><thead><tr><th>Vendor</th><th>Amount</th></tr></thead><tbody id="dd-vendors">
+      <tr><td><input type="text" placeholder="Vendor A"></td><td><input type="number" class="dd-vamt" oninput="recalcDaily()"></td></tr>
+      <tr><td><input type="text" placeholder="Vendor B"></td><td><input type="number" class="dd-vamt" oninput="recalcDaily()"></td></tr>
+      <tr><td><input type="text" placeholder="Vendor C"></td><td><input type="number" class="dd-vamt" oninput="recalcDaily()"></td></tr>
+      <tr><td><input type="text" placeholder="Vendor D"></td><td><input type="number" class="dd-vamt" oninput="recalcDaily()"></td></tr>
+      <tr><td><input type="text" placeholder="Vendor E"></td><td><input type="number" class="dd-vamt" oninput="recalcDaily()"></td></tr>
+    </tbody></table>
+    <label>Notes</label><input type="text" id="dd-notes">
+    <div class="preview" id="dd-preview"></div>
+    <button class="save" onclick="downloadDaily()">Save Daily Deposit Sheet</button>
   </div>
 
   <script>
-    // initialize fields from URL or defaults
-    document.getElementById('date').value = new Date().toISOString().split('T')[0];
+    // TAB SWITCH
+    const tabClose = document.getElementById('tab-close'),
+          tabDaily = document.getElementById('tab-daily'),
+          secClose = document.getElementById('close-section'),
+          secDaily = document.getElementById('daily-section');
+    function showClose(){ secClose.classList.add('active'); secDaily.classList.remove('active'); }
+    function showDaily(){ secDaily.classList.add('active'); secClose.classList.remove('active'); }
+    tabClose.onclick=showClose; tabDaily.onclick=showDaily;
+
+    // INITIALIZE URL PARAMS + DATE/STORE
     const params = new URLSearchParams(window.location.search);
-    const scrapedTendered = parseFloat(params.get('tendered')) || 0;
-    const scrapedTax      = parseInt(params.get('tax')) || 0;
-    document.getElementById('store').value    = params.get('store') || 'Sandy';
-    document.getElementById('tendered').value = scrapedTendered.toFixed(2);
-    document.getElementById('tax').value      = scrapedTax;
+    const store = params.get('store')||'Unknown';
+    const tender = parseFloat(params.get('tendered'))||0;
+    const tax    = parseInt(params.get('tax'))||0;
+    const today  = new Date().toISOString().split('T')[0];
+    ['cs-date','dd-date'].forEach(id=>document.getElementById(id).value=today);
+    ['cs-store','dd-store'].forEach(id=>document.getElementById(id).value=store);
+    document.getElementById('dd-tendered').value=tender.toFixed(2);
+    document.getElementById('dd-tax').value=tax;
+    showClose(); // default
 
-    // vendor payout inputs
-    const vendorInputs = Array.from(document.querySelectorAll('.vendor-amount'));
-
-    function sumVendors() {
-      return vendorInputs.reduce((sum, input) => sum + (parseFloat(input.value)||0), 0);
+    // CLOSE SHIFT LOGIC
+    const csPar=20;
+    function recalcClose(){
+      const coinsTotal = ['pennies','nickels','dimes','quarters','dollars']
+        .reduce((sum, d) => sum + (parseFloat(document.getElementById(`cs-${d}`).value)||0),0);
+      const diff = (csPar - coinsTotal).toFixed(2);
+      document.getElementById('cs-coin-adjust').value = diff;
+      const depositCoins = Math.max(0, coinsTotal - csPar).toFixed(2);
+      const bills = parseFloat(document.getElementById('cs-bills').value)||0;
+      const drop = (bills + parseFloat(depositCoins)).toFixed(2);
+      document.getElementById('cs-drop-total').value = drop;
+      document.getElementById('cs-adjustment').innerHTML = `
+        <strong>Coins to Deposit:</strong> $${depositCoins}`;
     }
 
-    // 1) Net from POS: F18 = F16 - F17
-    function netFromPOS() {
-      return scrapedTendered - scrapedTax;
+    // DAILY DEPOSIT LOGIC
+    function sumV(){ return Array.from(document.getElementsByClassName('dd-vamt'))
+      .reduce((a,i)=>a+(parseFloat(i.value)||0),0); }
+    function recalcDaily(){
+      const netPOS = tender - tax;
+      const vendorNeg = -sumV();
+      const netO = netPOS + vendorNeg;
+      const change = parseFloat(document.getElementById('dd-change').value)||0;
+      const actual = change;
+      const diff = (actual - netO).toFixed(2);
+      document.getElementById('dd-preview').innerHTML = `
+        Net from POS:   $${netPOS.toFixed(2)}<br>
+        Vendor Totals:  $${vendorNeg.toFixed(2)}<br>
+        Net Owed:       $${netO.toFixed(2)}<br>
+        Cash from Bag:  $${actual.toFixed(2)}<br>
+        Discrepancy:    $${diff}`;
     }
+    recalcDaily();
 
-    // 2) Vendor payouts negative: F19 = -SUM(vendors)
-    function vendorPayoutsNegative() {
-      return -sumVendors();
+    // DOWNLOAD DAILY
+    function downloadDaily(){
+      const ws_data = [
+        ['Date','Store','Net POS','Vendor Payouts','Net Owed','Cash from Bag','Discrepancy'],
+        [today,store,(tender-tax).toFixed(2),(-sumV()).toFixed(2),((tender-tax)-sumV()).toFixed(2),
+         document.getElementById('dd-change').value||0, (parseFloat(document.getElementById('dd-change').value)||0 - ((tender-tax)-sumV())).toFixed(2)]
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(ws_data),'Deposit');
+      XLSX.writeFile(wb, `${today} - ${store} Daily Deposit.xlsx`);
     }
-
-    // 3) Net deposit owed: F20 = F18 + F19
-    function netDepositOwed() {
-      return netFromPOS() + vendorPayoutsNegative();
-    }
-
-    // coin par values
-    const coinPar = { pennies:1.00, nickels:4.00, dimes:5.00, quarters:10.00, dollars:0.00 };
-
-    function recalcAll() {
-      // coin totals & adjustments
-      const coins = {
-        pennies : parseFloat(document.getElementById('pennies').value)||0,
-        nickels : parseFloat(document.getElementById('nickels').value)||0,
-        dimes   : parseFloat(document.getElementById('dimes').value)||0,
-        quarters: parseFloat(document.getElementById('quarters').value)||0,
-        dollars : parseFloat(document.getElementById('dollars').value)||0
-      };
-      let coinTotal = 0;
-      let adjustmentsHtml = '<table><tr><th>Denomination</th><th>Adjustment</th></tr>';
-      for (let denom in coins) {
-        const entered = coins[denom];
-        coinTotal += entered;
-        const diff = (coinPar[denom] - entered).toFixed(2);
-        let adj;
-        if (Math.abs(diff) < 0.01) adj = 'OK';
-        else if (diff > 0) adj = `Add $${diff}`;
-        else adj = `Remove $${Math.abs(diff)}`;
-        adjustmentsHtml += `<tr><td>${denom.charAt(0).toUpperCase()+denom.slice(1)}</td><td>${adj}</td></tr>`;
-      }
-      adjustmentsHtml += '</table>';
-      document.getElementById('coinAdjustments').innerHTML = adjustmentsHtml;
-      document.getElementById('total-coins').value = coinTotal.toFixed(2);
-
-      // bills & drop
-      const bills = parseFloat(document.getElementById('input-bills').value)||0;
-      const totalCash = coinTotal + bills;
-      // simply show total cash drop (bills + coins)
-      document.getElementById('actual-deposit').value = totalCash.toFixed(2);
-
-      updatePreview();
-    }
-
-    function updatePreview() {
-      const netPos       = netFromPOS().toFixed(2);
-      const vendorNeg    = vendorPayoutsNegative().toFixed(2);
-      const netOwed      = netDepositOwed().toFixed(2);
-      const actualDep    = parseFloat(document.getElementById('actual-deposit').value)||0;
-      const disc         = (actualDep - netDepositOwed()).toFixed(2);
-      const warning      = (Math.abs(disc)>0.01)
-                          ? `<span class='discrepancy-warning'>⚠ Discrepancy: $${disc}</span>`
-                          : `Discrepancy: $${disc}`;
-      document.getElementById('preview').innerHTML = `
-        Store: ${document.getElementById('store').value}<br>
-        Date:  ${document.getElementById('date').value}<br>
-        Net from POS:     $${netPos}<br>
-        Vendor Payouts:   $${vendorNeg}<br>
-        Net Deposit Owed: $${netOwed}<br>
-        Actual Deposit:   $${actualDep.toFixed(2)}<br>
-        ${warning}`;
-    }
-
-    // download as XLSX
-    function downloadSheet() {
-      const date   = document.getElementById('date').value;
-      const store  = document.getElementById('store').value;
-      const vendors = Array.from(document.querySelectorAll('#vendorTable tr')).map(r=>{
-        const n=r.cells[0].querySelector('input').value.trim();
-        const a=parseFloat(r.cells[1].querySelector('input').value)||0;
-        return n?[n,a]:null;
-      }).filter(Boolean);
-      const changeBag = parseFloat(document.getElementById('changeFromBag').value)||0;
-      const notes     = document.getElementById('notes').value || '';
-      const row1=[['Date','Store','Tendered','Tax','Net POS','Vendor Payouts','Net Owed','Bills','Coins','Actual Drop']];
-      const vals1=[[
-        date,store,scrapedTendered,scrapedTax,
-        netFromPOS(),sumVendors()*-1,netDepositOwed(),
-        parseFloat(document.getElementById('input-bills').value)||0,
-        parseFloat(document.getElementById('total-coins').value)||0,
-        parseFloat(document.getElementById('actual-deposit').value)||0
-      ]];
-      const vendorRows = [['Vendor','Amount'],...vendors];
-      const notesRows  = [['Change from Bag',changeBag],['Notes',notes]];
-      const wb=XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb,
-        XLSX.utils.aoa_to_sheet([].concat(row1,vals1,[[]],vendorRows,[[]],notesRows))
-        ,'Deposit');
-      XLSX.writeFile(wb,`${date} - ${store}.xlsx`);
-    }
-
-    // bind events
-    vendorInputs.forEach(i=>i.addEventListener('input', recalcAll));
-    ['pennies','nickels','dimes','quarters','dollars','input-bills'].forEach(id=>{
-      document.getElementById(id).addEventListener('input', recalcAll);
-    });
-
-    // initial calc
-    recalcAll();
   </script>
 </body>
 </html>
