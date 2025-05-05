@@ -39,17 +39,12 @@
     <label>Dimes</label><input type="number" id="dimes" oninput="calculateTill()">
     <label>Quarters</label><input type="number" id="quarters" oninput="calculateTill()">
     <label>Dollar Coins</label><input type="number" id="dollars" oninput="calculateTill()">
-    <h4>Bills</h4>
-    <label>$1s</label><input type="number" id="b1" oninput="calculateTill()">
-    <label>$5s</label><input type="number" id="b5" oninput="calculateTill()">
-    <label>$10s</label><input type="number" id="b10" oninput="calculateTill()">
-    <label>$20s</label><input type="number" id="b20" oninput="calculateTill()">
-    <label>$50s</label><input type="number" id="b50" oninput="calculateTill()">
-    <label>$100s</label><input type="number" id="b100" oninput="calculateTill()">
+    <h4>Bills (After $480 removed for Reset Till)</h4>
+    <label>Total Bills</label><input type="number" id="totalBills" oninput="calculateTill()">
 
-    <label>Total Drop (after float)</label>
+    <label>Total Cash Drop</label>
     <input type="number" id="dropTotal" step="0.01" readonly>
-    <label>Coin Adjustment to get to $20</label>
+    <label>Total Coins</label>
     <input type="number" id="coinAdjustment" step="0.01" readonly>
   </div>
 
@@ -100,17 +95,10 @@
         (parseInt(document.getElementById('quarters').value) || 0) * 0.25 +
         (parseInt(document.getElementById('dollars').value) || 0) * 1.00
       );
-      const bills = (
-        (parseInt(document.getElementById('b1').value) || 0) * 1 +
-        (parseInt(document.getElementById('b5').value) || 0) * 5 +
-        (parseInt(document.getElementById('b10').value) || 0) * 10 +
-        (parseInt(document.getElementById('b20').value) || 0) * 20 +
-        (parseInt(document.getElementById('b50').value) || 0) * 50 +
-        (parseInt(document.getElementById('b100').value) || 0) * 100
-      );
+      const bills = parseFloat(document.getElementById('totalBills').value) || 0;
       const totalCash = coins + bills;
       const drop = (totalCash - floatAmount).toFixed(2);
-      const coinAdjust = (coinPar - coins).toFixed(2);
+      const coinAdjust = coins.toFixed(2);
       document.getElementById('dropTotal').value = drop;
       document.getElementById('coinAdjustment').value = coinAdjust;
       updatePreview();
@@ -171,7 +159,7 @@
         Store: ${document.getElementById('store').value}<br>
         Date: ${document.getElementById('date').value}<br>
         Total Tendered: $${tendered}<br>
-        Drop Total: $${dropTotal}<br>
+        Total Cash Drop: $${dropTotal}<br>
         Vendor Payout Total: $${vendorTotal.toFixed(2)}<br>
         ${warning}`;
     }
