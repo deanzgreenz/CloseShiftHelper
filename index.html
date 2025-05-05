@@ -31,10 +31,10 @@
     <label>Date</label><input type="text" id="cs-date" readonly>
     <label>Store</label><input type="text" id="cs-store" readonly>
     <h3>Coin Reset Par = $20</h3>
-    <label>Pennies ($)</label><input type="number" step="0.01" id="cs-pennies" placeholder="e.g. 1.00" oninput="recalcClose()">
-    <label>Nickels ($)</label><input type="number" step="0.01" id="cs-nickels" placeholder="e.g. 4.00" oninput="recalcClose()">
-    <label>Dimes ($)</label><input type="number" step="0.01" id="cs-dimes" placeholder="e.g. 5.00" oninput="recalcClose()">
     <label>Quarters ($)</label><input type="number" step="0.01" id="cs-quarters" placeholder="e.g. 10.00" oninput="recalcClose()">
+    <label>Dimes ($)</label><input type="number" step="0.01" id="cs-dimes" placeholder="e.g. 5.00" oninput="recalcClose()">
+    <label>Nickels ($)</label><input type="number" step="0.01" id="cs-nickels" placeholder="e.g. 4.00" oninput="recalcClose()">
+    <label>Pennies ($)</label><input type="number" step="0.01" id="cs-pennies" placeholder="e.g. 1.00" oninput="recalcClose()">
     <label>Dollar Coins ($)</label><input type="number" step="0.01" id="cs-dollars" placeholder="e.g. 0.00" oninput="recalcClose()">
     <table>
       <thead>
@@ -92,20 +92,19 @@
     showClose();
 
     // CLOSE SHIFT LOGIC
-    const parCount = { pennies:100, nickels:80, dimes:50, quarters:40, dollars:0 };
-    const valuePer = { pennies:0.01, nickels:0.05, dimes:0.10, quarters:0.25, dollars:1.00 };
+    const parCount = { quarters:40, dimes:50, nickels:80, pennies:100, dollars:0 };
+    const valuePer = { quarters:0.25, dimes:0.10, nickels:0.05, pennies:0.01, dollars:1.00 };
     function recalcClose(){
-      // read entered dollar amounts
       const enteredDol = {
-        pennies: parseFloat(document.getElementById('cs-pennies').value)||0,
-        nickels: parseFloat(document.getElementById('cs-nickels').value)||0,
-        dimes:   parseFloat(document.getElementById('cs-dimes').value)||0,
-        quarters:parseFloat(document.getElementById('cs-quarters').value)||0,
-        dollars: parseFloat(document.getElementById('cs-dollars').value)||0
+        quarters: parseFloat(document.getElementById('cs-quarters').value)||0,
+        dimes:    parseFloat(document.getElementById('cs-dimes').value)||0,
+        nickels:  parseFloat(document.getElementById('cs-nickels').value)||0,
+        pennies:  parseFloat(document.getElementById('cs-pennies').value)||0,
+        dollars:  parseFloat(document.getElementById('cs-dollars').value)||0
       };
-      let tableHTML = '';
+      let rows = '';
       let totalCoinsValue = 0;
-      for(const denom of ['pennies','nickels','dimes','quarters','dollars']){
+      for(const denom of ['quarters','dimes','nickels','pennies','dollars']){
         const val = enteredDol[denom];
         const parVal = parCount[denom] * valuePer[denom];
         const diffCount = Math.round((val - parVal) / valuePer[denom]);
@@ -113,15 +112,14 @@
         if(diffCount === 0) action = 'OK';
         else if(diffCount > 0) action = `Remove ${diffCount}`;
         else action = `Add ${Math.abs(diffCount)}`;
-        tableHTML += `<tr><td>${denom.charAt(0).toUpperCase()+denom.slice(1)}</td><td>$${parVal.toFixed(2)}</td><td>$${val.toFixed(2)}</td><td>${action}</td></tr>`;
+        rows += `<tr><td>${denom.charAt(0).toUpperCase()+denom.slice(1)}</td><td>$${parVal.toFixed(2)}</td><td>$${val.toFixed(2)}</td><td>${action}</td></tr>`;
         totalCoinsValue += val;
       }
-      document.getElementById('cs-coin-table').innerHTML = tableHTML;
-      // coins adjustment = totalCoinsValue - 20
+      document.getElementById('cs-coin-table').innerHTML = rows;
       const coinAdjust = totalCoinsValue - 20;
       document.getElementById('cs-coin-adjust').value = coinAdjust.toFixed(2);
       const bills = parseFloat(document.getElementById('cs-bills').value)||0;
-      const drop = (bills + Math.max(coinAdjust,0)).toFixed(2);
+      const drop = (bills + coinAdjust).toFixed(2);
       document.getElementById('cs-drop-total').value = drop;
     }
 
