@@ -2,26 +2,32 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Close Shift & Daily Deposit Helper</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
+    body { font-family: Arial,sans-serif; padding: 20px; }
+    h1 { margin-bottom: 10px; }
     .tabs { display: flex; margin-bottom: 20px; }
-    .tab { padding: 10px 20px; cursor: pointer; border: 1px solid #ccc; border-bottom: none; background: #f9f9f9; }
+    .tab {
+      padding: 8px 16px; cursor: pointer;
+      border: 1px solid #ccc; background: #f0f0f0;
+      margin-right: 4px;
+    }
     .tab.active { background: #fff; font-weight: bold; }
     .panel { border: 1px solid #ccc; padding: 20px; display: none; }
     .panel.active { display: block; }
-    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
-    input[type="number"] { width: 80px; }
-    .actions { margin-top: 10px; }
-    .actions button { margin-right: 10px; }
-    label { display: inline-block; width: 250px; }
+    table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+    th, td { border: 1px solid #ddd; padding: 6px; text-align: center; }
+    label { display: inline-block; width: 300px; margin-bottom: 6px; }
+    input[type=number] { width: 80px; padding: 4px; }
+    .actions { margin-top: 12px; }
+    .actions button { padding: 6px 12px; margin-right: 8px; }
     em { color: #555; font-size: 0.9em; }
   </style>
 </head>
 <body>
   <h1>Close Shift & Daily Deposit Helper</h1>
+
   <div class="tabs">
     <div class="tab active" data-target="close-shift">Close Shift</div>
     <div class="tab" data-target="daily-deposit">Complete Daily Deposit</div>
@@ -32,27 +38,55 @@
     <h2>Close Shift</h2>
     <div>
       <label>Bills (After $480 removed for Reset Till):</label>
-      <input id="bills" type="number" step="0.01" value="0"> <span>Total Cash From Cash Counter</span>
+      <input id="bills" type="number" step="0.01" value="0">
+      <strong>Total Cash From Cash Counter</strong>
     </div>
+
     <h3>Till Flipper</h3>
     <table>
-      <thead><tr><th>Coin</th><th>Par</th><th>Counted</th><th>Action</th></tr></thead>
+      <thead>
+        <tr><th>Coin</th><th>Par</th><th>Counted</th><th>Action</th></tr>
+      </thead>
       <tbody>
-        <tr><td>Quarters</td><td>10</td><td><input class="coin" data-par="10" id="quarters" type="number" step="0.01" value="10"></td><td id="act-quarters"></td></tr>
-        <tr><td>Dimes</td><td>5</td><td><input class="coin" data-par="5" id="dimes" type="number" step="0.01" value="5"></td><td id="act-dimes"></td></tr>
-        <tr><td>Nickels</td><td>4</td><td><input class="coin" data-par="4" id="nickels" type="number" step="0.01" value="4"></td><td id="act-nickels"></td></tr>
-        <tr><td>Pennies</td><td>1</td><td><input class="coin" data-par="1" id="pennies" type="number" step="0.01" value="1"></td><td id="act-pennies"></td></tr>
-        <tr><td>Dollar Coins</td><td>0</td><td><input class="coin" data-par="0" id="dollarcoins" type="number" step="1" value="0"></td><td id="act-dollarcoins"></td></tr>
+        <tr>
+          <td>Quarters</td><td>10</td>
+          <td><input class="coin" data-par="10" id="quarters" type="number" step="0.01" value="10"></td>
+          <td id="act-quarters"></td>
+        </tr>
+        <tr>
+          <td>Dimes</td><td>5</td>
+          <td><input class="coin" data-par="5" id="dimes" type="number" step="0.01" value="5"></td>
+          <td id="act-dimes"></td>
+        </tr>
+        <tr>
+          <td>Nickels</td><td>4</td>
+          <td><input class="coin" data-par="4" id="nickels" type="number" step="0.01" value="4"></td>
+          <td id="act-nickels"></td>
+        </tr>
+        <tr>
+          <td>Pennies</td><td>1</td>
+          <td><input class="coin" data-par="1" id="pennies" type="number" step="0.01" value="1"></td>
+          <td id="act-pennies"></td>
+        </tr>
+        <tr>
+          <td>Dollar Coins</td><td>0</td>
+          <td><input class="coin" data-par="0" id="dollarcoins" type="number" step="1" value="0"></td>
+          <td id="act-dollarcoins"></td>
+        </tr>
       </tbody>
     </table>
+
     <div>
       <label>Total Coin Adjustment ($):</label>
-      <span id="coin-adjustment">0.00</span> <em>: Write this total on the Shift Report Receipt</em>
+      <span id="coin-adjustment">0.00</span>
+      <em>: Write this total on the Shift Report Receipt</em>
     </div>
     <div>
       <label>Total Cash Drop ($):</label>
-      <span id="cash-drop">0.00</span> <em>: Enter this total into POSaBIT as the Closing Drop field, and $500 in the Left In Drawer field</em>
+      <span id="cash-drop">0.00</span>
+      <em>: Enter this total into POSaBIT as the Closing Drop field, and $500 in Left In Drawer</em>
     </div>
+
     <div class="actions">
       <button id="calc-close-shift">Calculate Close Shift</button>
     </div>
@@ -63,9 +97,11 @@
     <h2>Complete Daily Deposit</h2>
     <div>
       <label>Total Closing Cash ($):</label>
-      <input id="closing-cash" type="number" step="0.01" value="0"> <em>: Remaining Cash Value after all Taxes and Vendor Payouts / Bills have been set aside with a Petty Cash Slip.</em>
+      <input id="closing-cash" type="number" step="0.01" value="0">
+      <em>: Remaining cash after Taxes & Vendor Bills</em>
     </div>
-    <h3>Coin Adjustments from Shifts</h3>
+
+    <h3>Shift Coin Adjustments</h3>
     <div id="coin-adjust-list">
       <div><label>Shift 1:</label> <input class="shift-coin" type="number" step="0.01" value="0"></div>
       <div><label>Shift 2:</label> <input class="shift-coin" type="number" step="0.01" value="0"></div>
@@ -78,6 +114,7 @@
       <label>Total Closing Coin Adjustments ($):</label>
       <span id="total-coin-adjust-shifts">0.00</span>
     </div>
+
     <div>
       <label>Actual Deposit ($):</label>
       <span id="actual-deposit">0.00</span>
@@ -90,6 +127,7 @@
       <label>Difference ($):</label>
       <span id="difference-deposit">0.00</span>
     </div>
+
     <div class="actions">
       <button id="calc-daily-deposit">Calculate Deposit</button>
       <button id="export-excel">Save Daily Deposit Sheet</button>
@@ -97,55 +135,55 @@
   </div>
 
   <script>
+  document.addEventListener('DOMContentLoaded', ()=> {
     // Tab switching
-    document.querySelectorAll('.tab').forEach(tab => tab.onclick = () => {
-      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-      tab.classList.add('active');
-      document.getElementById(tab.dataset.target).classList.add('active');
+    document.querySelectorAll('.tab').forEach(tab=>{
+      tab.addEventListener('click', ()=>{
+        document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById(tab.dataset.target).classList.add('active');
+      });
     });
 
-    // Close Shift calculations
-    document.getElementById('calc-close-shift').onclick = () => {
-      const billVal = parseFloat(document.getElementById('bills').value) || 0;
-      let coinAdj = 0;
-      document.querySelectorAll('.coin').forEach(input => {
-        const par = parseFloat(input.dataset.par);
-        const val = parseFloat(input.value) || 0;
-        const diff = val - par;
-        coinAdj += diff;
-        const actCell = document.getElementById('act-' + input.id);
-        actCell.textContent = diff === 0 ? 'OK' : diff > 0 ? 'Remove ' + diff.toFixed(2) : 'Add ' + (-diff).toFixed(2);
+    // Close Shift
+    document.getElementById('calc-close-shift').addEventListener('click', ()=>{
+      const billVal = parseFloat(document.getElementById('bills').value)||0;
+      let coinAdj=0;
+      document.querySelectorAll('.coin').forEach(inp=>{
+        const par=+inp.dataset.par, val=+inp.value||0, diff=val-par;
+        coinAdj+=diff;
+        const cell=document.getElementById('act-'+inp.id);
+        cell.textContent = diff===0 ? 'OK'
+          : diff>0 ? 'Remove '+diff.toFixed(2)
+          : 'Add '+(-diff).toFixed(2);
       });
       document.getElementById('coin-adjustment').textContent = coinAdj.toFixed(2);
-      const drop = billVal + coinAdj;
-      document.getElementById('cash-drop').textContent = drop.toFixed(2);
-    };
+      document.getElementById('cash-drop').textContent = (billVal+coinAdj).toFixed(2);
+    });
 
-    // Daily Deposit calculations
-    document.getElementById('calc-daily-deposit').onclick = () => {
-      const closingCash = parseFloat(document.getElementById('closing-cash').value) || 0;
-      let totalShiftCoins = 0;
-      document.querySelectorAll('.shift-coin').forEach(input => totalShiftCoins += parseFloat(input.value) || 0);
-      document.getElementById('total-coin-adjust-shifts').textContent = totalShiftCoins.toFixed(2);
+    // Daily Deposit
+    document.getElementById('calc-daily-deposit').addEventListener('click', ()=>{
+      const closeCash=+document.getElementById('closing-cash').value||0;
+      let sumShifts=0;
+      document.querySelectorAll('.shift-coin').forEach(inp=> sumShifts+=+inp.value||0 );
+      document.getElementById('total-coin-adjust-shifts').textContent = sumShifts.toFixed(2);
 
-      const actual = closingCash + totalShiftCoins;
+      const actual = closeCash + sumShifts;
       document.getElementById('actual-deposit').textContent = actual.toFixed(2);
 
-      // Net Deposit = TotalTendered - TaxCollected
-      const params = new URLSearchParams(window.location.search);
-      const tendered = parseFloat(params.get('tendered')) || 0;
-      const tax = parseFloat(params.get('tax')) || 0;
-      const net = tendered - tax;
+      // Net Deposit = ?(from URL)
+      const params=new URLSearchParams(location.search);
+      const t=+params.get('tendered')||0, x=+params.get('tax')||0;
+      const net = t - x;
       document.getElementById('net-deposit').textContent = net.toFixed(2);
-
       document.getElementById('difference-deposit').textContent = (actual - net).toFixed(2);
-    };
+    });
 
-    // Export stub
-    document.getElementById('export-excel').onclick = () => {
-      alert('This will generate an Excel file with your daily deposit data.');
-    };
+    document.getElementById('export-excel').addEventListener('click', ()=>{
+      alert('Excel export not yet implemented');
+    });
+  });
   </script>
 </body>
 </html>
