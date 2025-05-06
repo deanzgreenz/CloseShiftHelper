@@ -377,86 +377,155 @@
       previewArea.textContent = previewLines.join('\n');
     };
 
-    // Excel Export
+    // --- Excel Export ---
     document.getElementById('export-excel').onclick = () => {
       // Run calculation first to ensure all displayed values are up-to-date
       document.getElementById('calc-daily-deposit').click();
 
       const wb = XLSX.utils.book_new();
-      const data = [];
-      const getVal = id => (document.getElementById(id).value || '').trim();
-      const getTxt = id => (document.getElementById(id).textContent || '').trim();
+      const data = []; // Array of arrays for aoa_to_sheet
+      const headerRows = []; // Keep track of row indices for headers to style later
 
+      const getVal = id => (document.getElementById(id).value || '').trim();
+      // Function to get numeric value from text content (remove $, commas)
+      const getNumFromTxt = id => {
+          const text = (document.getElementById(id).textContent || '').replace(/[$,]/g, '');
+          return parseFloat(text) || 0;
+      }
+       // Function to get numeric value from an input
+       const getNumFromVal = id => {
+            const text = (document.getElementById(id).value || '').replace(/[$,]/g, '');
+            return parseFloat(text) || 0;
+       }
+
+
+      // --- Build Data Array ---
+      headerRows.push(data.length); // Mark row index for styling
+      data.push(['----- Daily Deposit Summary -----']); // Header row
       data.push(['Name', getVal('emp-name')]);
       data.push(['Date', getVal('dd-date')]);
       data.push(['Venue', store]);
       data.push([]); // Spacer
 
-      data.push(['Total Tendered', getTxt('dd-tendered')]);
-      data.push(['Total Taxes', getTxt('dd-taxes')]);
-      data.push(['Net from POSaBIT Sales', getTxt('dd-net-sales')]);
+      headerRows.push(data.length);
+      data.push(['----- Sales & Taxes -----']);
+      // Use actual numbers for currency/number formatting in Excel
+      data.push(['Total Tendered', tendered]);
+      data.push(['Total Taxes', taxes]); // Use original tax value
+      data.push(['Net from POSaBIT Sales', getNumFromTxt('dd-net-sales')]);
       data.push([]); // Spacer
 
-      // Individual Vendor Payouts
-      let hasVendorEntries = false;
-      document.querySelectorAll('#vendor-list .vendor-row').forEach((row, idx) => {
+      headerRows.push(data.length);
+      data.push(['----- Vendor Payouts / Bills -----']);
+      let vendorCount = 0;
+      document.querySelectorAll('#vendor-list .vendor-row').forEach((row) => {
         const descInput = row.querySelector('.vendor-desc');
         const amountInput = row.querySelector('.vendor-amount');
         const desc = descInput ? descInput.value.trim() : '';
         const amount = amountInput ? (+amountInput.value || 0) : 0;
 
         if (desc || amount > 0) {
-          data.push([`Vendor ${idx + 1} Desc`, desc]);
-          data.push([`Vendor ${idx + 1} Amount`, amount.toFixed(2)]);
-          hasVendorEntries = true;
+          // Indent description slightly for clarity
+          data.push([`  ${desc || '(No Description)'}`, amount]);
+          vendorCount++;
         }
       });
-      if (hasVendorEntries) {
-          data.push([]); // Add spacer only if vendor entries exist
-      }
+       if (vendorCount === 0) {
+          data.push(['  (None)']);
+       }
+      data.push([]); // Spacer after individual items
 
-
-      data.push(['Total Vendor Payouts', getTxt('total-vendor')]);
-      data.push(['Net Deposit After Bills', getTxt('dd-net-after-bills')]);
+      data.push(['Total Vendor Payouts', getNumFromTxt('total-vendor')]);
+      data.push(['Net Deposit After Bills', getNumFromTxt('dd-net-after-bills')]);
       data.push([]); // Spacer
 
-      data.push(['Total Closing Cash', getVal('closing-cash')]);
-      data.push([]); // Spacer for shift adjustments
+      headerRows.push(data.length);
+      data.push(['----- Cash & Coins -----']);
+      data.push(['Total Closing Cash', getNumFromVal('closing-cash')]);
+      data.push([]); // Spacer for adjustments
 
-      // Individual Shift Coin Adjustments
-      let hasShiftAdjustments = false;
-      document.querySelectorAll('.shift-coin').forEach((i, idx) => {
+      headerRows.push(data.length); // Sub-header for shift adjustments
+      data.push(['Shift Coin Adjustments']);
+      let adjCount = 0;
+       document.querySelectorAll('.shift-coin').forEach((i, idx) => {
           const adjValue = +i.value || 0;
            if (adjValue !== 0) { // Only include non-zero adjustments
-              data.push([`Shift ${idx + 1} Coin Adj`, adjValue.toFixed(2)]);
-              hasShiftAdjustments = true;
+              data.push([`  Shift ${idx + 1}`, adjValue]);
+              adjCount++;
            }
       });
-       if (hasShiftAdjustments) {
-          data.push([]); // Add spacer only if adjustments exist
+      if (adjCount === 0) {
+          data.push(['  (None)']);
        }
+      data.push([]); // Spacer after individual adjustments
 
-
-      data.push(['Total Closing Coin Adjustments', getTxt('total-coin-adjust-shifts')]);
-      data.push(['Total Cash & Coins', getTxt('total-cash-coins')]);
+      data.push(['Total Closing Coin Adjustments', getNumFromTxt('total-coin-adjust-shifts')]);
+      data.push(['Total Cash & Coins', getNumFromTxt('total-cash-coins')]);
       data.push([]); // Spacer
 
-      data.push(['Actual Deposit', getTxt('res-actual')]);
-      data.push(['Net Deposit', getTxt('res-net-deposit')]);
-      data.push(['Difference', getTxt('res-difference')]);
+      headerRows.push(data.length);
+      data.push(['----- Results -----']);
+      data.push(['Actual Deposit', getNumFromTxt('res-actual')]);
+      data.push(['Net Deposit', getNumFromTxt('res-net-deposit')]);
+      data.push(['Difference', getNumFromTxt('res-difference')]);
       data.push([]); // Spacer
 
-      data.push(['Money from Change Bag', getVal('change-bag')]);
-      data.push(['Notes', getVal('notes')]);
+      headerRows.push(data.length);
+      data.push(['----- Extras -----']);
+      data.push(['Money from Change Bag', getNumFromVal('change-bag')]);
+      data.push(['Notes', getVal('notes')]); // Keep notes as text
 
+      // --- Create Worksheet & Apply Styling ---
       const ws = XLSX.utils.aoa_to_sheet(data);
 
-       // Adjust column widths (optional, but helpful)
-       ws['!cols'] = [{ wch: 30 }, { wch: 15 }]; // Set width for first two columns
+      // Set Column Widths
+      ws['!cols'] = [{ wch: 35 }, { wch: 15 }]; // Wider first column, standard second
+
+      // Apply Merges and Bold Styling to Header Rows
+      const merges = [];
+      headerRows.forEach(rowIndex => {
+        const cellRef = XLSX.utils.encode_cell({ r: rowIndex, c: 0 }); // A cell for the header row
+        if (ws[cellRef]) { // Check if cell exists
+            // Apply bold style
+             ws[cellRef].s = { font: { bold: true } };
+             // Define merge across two columns (A and B)
+             merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 1 } });
+         }
+         // Also make the 'Shift Coin Adjustments' sub-header bold
+         if (ws[cellRef] && ws[cellRef].v === 'Shift Coin Adjustments') {
+              ws[cellRef].s = { font: { bold: true } }; // Ensure bold is applied
+              // Optionally don't merge this one if it looks better as just bold in first column
+              // merges.pop(); // Remove the last added merge if you don't want to merge this specific header
+         }
+      });
+      ws['!merges'] = merges;
+
+      // Apply Number Formatting to specific cells (Column B where applicable)
+       // SheetJS often infers types, but we can be explicit with '.z' for format codes
+       // Example: Apply currency format ($#,##0.00) to numeric cells in column B
+       const currencyFormat = '$#,##0.00';
+       const numberFormat = '0.00'; // Standard number format
+       Object.keys(ws).forEach(cellRef => {
+           // Skip '!cols', '!merges', etc. and header rows
+           if (cellRef[0] === '!' || headerRows.includes(XLSX.utils.decode_cell(cellRef).r)) return;
+
+           const cell = ws[cellRef];
+           const col = XLSX.utils.decode_cell(cellRef).c;
+
+           // Apply to column B (index 1) if it's a number
+           if (col === 1 && cell.t === 'n') {
+                // Check the label in column A to decide format (optional refinement)
+                const labelCellRef = XLSX.utils.encode_cell({ r: XLSX.utils.decode_cell(cellRef).r, c: 0 });
+                const labelText = ws[labelCellRef] ? ws[labelCellRef].v : '';
+
+                // Apply currency format by default to numbers in col B
+                cell.z = currencyFormat;
+           }
+       });
 
 
+      // --- Finalize and Download ---
       XLSX.utils.book_append_sheet(wb, ws, 'Daily Deposit');
-      // Generate filename: Venue_YYYY-MM-DD_DailyDeposit.xlsx
       const filename = `${store.replace(/ /g, '_')}_${getVal('dd-date')}_DailyDeposit.xlsx`;
       XLSX.writeFile(wb, filename);
     };
@@ -465,7 +534,6 @@
     document.getElementById('calc-close-shift').click();
      // Trigger initial calculation for Daily Deposit default/URL values
     document.getElementById('calc-daily-deposit').click();
-
 
   });
   </script>
