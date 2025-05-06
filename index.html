@@ -2,209 +2,318 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Close Shift & Daily Deposit</title>
+  <title>Close Shift & Daily Deposit Helper</n>  <!-- fixed malformed title tag -->
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; margin: 0; padding: 0; }
-    .tabs { display: flex; background:#333; }
-    .tab { padding: 1rem; color:#fff; cursor:pointer; flex:1; text-align:center; }
-    .tab.active { background:#555; }
-    .panel { padding:1rem; display:none; }
-    .panel.active { display:block; }
-    .section { margin-bottom:1.5rem; }
-    .section h2 { margin-bottom:.5rem; }
-    label { display:block; margin:.25rem 0; }
-    input[type=number], input[type=text], input[type=date] { width:100%; padding:.5rem; }
-    table { width:100%; border-collapse:collapse; margin-top:.5rem; }
-    th, td { border:1px solid #ccc; padding:.5rem; text-align:right; }
-    th { background:#eee; }
-    .flex { display:flex; gap:1rem; }
-    .flex > div { flex:1; }
-    button { padding:.75rem 1.5rem; background:#28a745; color:#fff; border:none; cursor:pointer; }
+    body { font-family: Arial,sans-serif; padding: 20px; max-width:800px; margin:auto }
+    h1, h2, h3 { margin: .5em 0 }
+    .tabs { display: flex; margin-bottom: 20px; }
+    .tab {
+      padding: 8px 16px; cursor: pointer;
+      border: 1px solid #ccc; background: #f0f0f0;
+      margin-right: 4px;
+    }
+    .tab.active { background: #fff; font-weight: bold; }
+    .panel { border: 1px solid #ccc; padding: 20px; display: none; }
+    .panel.active { display: block; }
+    label { display: block; margin: .5em 0 0.2em; }
+    input, textarea { width: 100%; box-sizing: border-box; padding: 6px; }
+    table { width: 100%; border-collapse: collapse; margin: 1em 0 }
+    th, td { border: 1px solid #ddd; padding: 6px; text-align: center }
+    .small-input { width:80px; display:inline-block }
+    .actions { margin-top: 12px; }
+    .actions button { padding: 8px 14px; margin-right: 8px }
+    em { color: #555; font-size: .9em }
+    .vendor-row { display: flex; gap: 8px; margin-bottom: 4px; }
+    .vendor-desc { flex: 1; }
+    .vendor-amt { width: 100px; }
   </style>
+  <!-- SheetJS for Excel export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
+  <h1>Close Shift & Daily Deposit Helper</h1>
+
   <div class="tabs">
-    <div class="tab active" data-target="close">Close Shift</div>
-    <div class="tab" data-target="deposit">Complete Daily Deposit</div>
+    <div class="tab active" data-target="close-shift">Close Shift</div>
+    <div class="tab" data-target="daily-deposit">Complete Daily Deposit</div>
   </div>
-  <div id="close" class="panel active">
-    <div class="section">
-      <h2>Close Shift</h2>
-      <div><strong>Store:</strong> <span id="cs-store"></span></div>
-      <div><strong>Tendered:</strong> $<span id="cs-tendered">0.00</span></div>
-      <div><strong>Taxes:</strong> $<span id="cs-tax">0.00</span></div>
+
+  <!-- Close Shift Panel -->
+  <div id="close-shift" class="panel active">
+    <h2>Close Shift</n>
+    <label>Bills (After $480 removed for Reset Till):</label>
+    <input id="bills" type="number" step="0.01" value="0">
+
+    <h3>Till Flipper</h3>
+    <table>
+      <thead>
+        <tr><th>Coin</th><th>Par ($)</th><th>Counted ($)</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Quarters</td><td>10</td>
+          <td><input class="coin small-input" data-par="10" id="quarters" type="number" step="0.01" value="10"></td>
+          <td id="act-quarters"></td>
+        </tr>
+        <tr>
+          <td>Dimes</td><td>5</td>
+          <td><input class="coin small-input" data-par="5" id="dimes" type="number" step="0.01" value="5"></td>
+          <td id="act-dimes"></td>
+        </tr>
+        <tr>
+          <td>Nickels</td><td>4</td>
+          <td><input class="coin small-input" data-par="4" id="nickels" type="number" step="0.01" value="4"></td>
+          <td id="act-nickels"></td>
+        </tr>
+        <tr>
+          <td>Pennies</td><td>1</td>
+          <td><input class="coin small-input" data-par="1" id="pennies" type="number" step="0.01" value="1"></td>
+          <td id="act-pennies"></td>
+        </tr>
+        <tr>
+          <td>Dollar Coins</td><td>0</td>
+          <td><input class="coin small-input" data-par="0" id="dollarcoins" type="number" step="1" value="0"></td>
+          <td id="act-dollarcoins"></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div>
+      <strong>Total Cash From Cash Counter ($):</strong>
+      <span id="bills-display">0.00</span>
     </div>
-    <div class="section">
-      <h2>Till Flipper</h2>
-      <table id="coin-table">
-        <thead><tr><th>Denomination</th><th>Par</th><th>Counted</th><th>Action</th></tr></thead>
-        <tbody>
-          <!-- rows inserted by JS -->
-        </tbody>
-      </table>
+    <div>
+      <strong>Total Coin Adjustment ($):</strong>
+      <span id="coin-adjustment">0.00</span>
+      <em>: Write this total on the Shift Report Receipt</em>
     </div>
-    <div class="section">
-      <h2>Bills (After $480 removed for Reset Till)</h2>
-      <label>Total Cash From Cash Counter ($): <input type="number" id="cs-bills" value="0"></label>
-      <label>Total Coin Adjustment ($): <input type="number" id="cs-coin-adj" readonly> <small>Write this total on the Shift Report Receipt</small></label>
-      <label>Total Cash Drop ($): <input type="number" id="cs-cash-drop" readonly> <small>Enter this total into POSaBIT as the Closing Drop field, and $500 in the Left In Drawer field</small></label>
+    <div>
+      <strong>Total Cash Drop ($):</strong>
+      <span id="cash-drop">0.00</span>
+      <em>: Enter this total into POSaBIT Closing Drop / $500 Left In Drawer</em>
+    </div>
+
+    <div class="actions">
+      <button id="calc-close-shift">Calculate Close Shift</button>
     </div>
   </div>
-  <div id="deposit" class="panel">
-    <div class="section">
-      <h2>Complete Daily Deposit</h2>
-      <label>Name: <input type="text" id="dd-name"></label>
-      <label>Date: <input type="date" id="dd-date"></label>
-      <label>Venue: <input type="text" id="dd-store" readonly></label>
+
+  <!-- Daily Deposit Panel -->
+  <div id="daily-deposit" class="panel">
+    <h2>Complete Daily Deposit</h2>
+
+    <label>Name:</label>
+    <input id="emp-name" placeholder="Your name">
+
+    <label>Date:</label>
+    <input id="dd-date" readonly>
+
+    <label>Venue:</label>
+    <input id="dd-venue" readonly>
+
+    <h3>Vendor Payouts / Bills</h3>
+    <div id="vendor-list">
+      <div class="vendor-row"><input class="vendor-desc" placeholder="Description"><input class="vendor-amt small-input" placeholder="Amount" type="number" step="0.01"></div>
+      <div class="vendor-row"><input class="vendor-desc" placeholder="Description"><input class="vendor-amt small-input" placeholder="Amount" type="number" step="0.01"></div>
+      <div class="vendor-row"><input class="vendor-desc" placeholder="Description"><input class="vendor-amt small-input" placeholder="Amount" type="number" step="0.01"></div>
+      <div class="vendor-row"><input class="vendor-desc" placeholder="Description"><input class="vendor-amt small-input" placeholder="Amount" type="number" step="0.01"></div>
+      <div class="vendor-row"><input class="vendor-desc" placeholder="Description"><input class="vendor-amt small-input" placeholder="Amount" type="number" step="0.01"></div>
     </div>
-    <div class="section">
-      <h2>Vendor Payouts / Bills</h2>
-      <div id="vp-list">
-        <!-- 5 rows -->
-      </div>
-      <label>Total Vendor Payouts ($): <input type="number" id="dd-vp-total" readonly></label>
+    <div>
+      <strong>Total Vendor Payouts ($):</strong>
+      <span id="total-vendor">0.00</span>
     </div>
-    <div class="section">
-      <h2>Totals</h2>
-      <div>Tendered: $<span id="dd-tendered">0.00</span></div>
-      <div>Taxes: $<span id="dd-tax">0.00</span></div>
-      <div>Net from POSaBIT Sales: $<span id="dd-net-pos">0.00</span></div>
-      <div>Total Vendor Payouts: $<span id="dd-vp-total2">0.00</span></div>
-      <div>Net Deposit: $<span id="dd-net-dep">0.00</span></div>
+
+    <h3>Totals</h3>
+    <div><strong>Total Tendered ($):</strong> <span id="dd-tendered">0.00</span></div>
+    <div><strong>Total Taxes ($):</strong> <span id="dd-taxes">0.00</span></div>
+    <div><strong>Net from POSaBIT Sales ($):</strong> <span id="dd-net-sales">0.00</span></div>
+    <div><strong>Net Deposit After Bills ($):</strong> <span id="dd-net-after-bills">0.00</span></div>
+
+    <h3>Cash &amp; Coins</h3>
+    <div>
+      <label>Total Closing Cash ($):</label>
+      <input id="closing-cash" type="number" step="0.01" value="0">
+      <em>: Remaining cash after Taxes & Bills</em>
     </div>
-    <div class="section">
-      <h2>Cash & Coins</h2>
-      <label>Total Closing Cash ($): <input type="number" id="dd-closing-cash"></label>
-      <h3>Shift Coin Adjustments</h3>
-      <div id="cc-list">
-        <!-- 6 fields -->
-      </div>
-      <label>Total Closing Coin Adjustment ($): <input type="number" id="dd-coin-adj" readonly></label>
-      <label>Total Cash & Coins ($): <input type="number" id="dd-cash-coins" readonly></label>
+    <h4>Shift Coin Adjustments</h4>
+    <div id="coin-adjust-list">
+      <div><label>Shift 1:</label> <input class="shift-coin small-input" type="number" step="0.01" value="0"></div>
+      <div><label>Shift 2:</label> <input class="shift-coin small-input" type="number" step="0.01" value="0"></div>
+      <div><label>Shift 3:</label> <input class="shift-coin small-input" type="number" step="0.01" value="0"></div>
+      <div><label>Shift 4:</label> <input class="shift-coin small-input" type="number" step="0.01" value="0"></div>
+      <div><label>Shift 5:</label> <input class="shift-coin small-input" type="number" step="0.01" value="0"></div>
+      <div><label>Shift 6:</label> <input class="shift-coin small-input" type="number" step="0.01" value="0"></div>
     </div>
-    <div class="section">
-      <h2>Results</h2>
-      <div>Actual Deposit: $<span id="dd-actual">0.00</span></div>
-      <div>Net Deposit: $<span id="dd-net-dep2">0.00</span></div>
-      <div>Difference: $<span id="dd-diff">0.00</span></div>
-      <label>Money from Change Bag: <input type="number" id="dd-change"></label>
-      <label>Notes:<textarea id="dd-notes" style="width:100%;height:4rem;"></textarea></label>
-    </div>
-    <div class="section">
-      <button id="save-btn">Save Daily Deposit</button>
+    <div><strong>Total Closing Coin Adjustments ($):</strong> <span id="total-coin-adjust-shifts">0.00</span></div>
+    <div><strong>Total Cash &amp; Coins ($):</strong> <span id="total-cash-coins">0.00</span></div>
+
+    <h3>Results</h3>
+    <div><strong>Actual Deposit ($):</strong> <span id="res-actual">0.00</span></div>
+    <div><strong>Net Deposit ($):</strong> <span id="res-net-deposit">0.00</span></div>
+    <div><strong>Difference ($):</strong> <span id="res-difference">0.00</span></div>
+
+    <label>Money from Change Bag ($):</label>
+    <input id="change-bag" type="number" step="0.01" value="0">
+
+    <label>Notes:</label>
+    <textarea id="notes" rows="3"></textarea>
+
+    <h3>Preview</h3>
+    <pre id="preview" style="background:#f9f9f9;padding:10px;"></pre>
+
+    <div class="actions">
+      <button id="calc-daily-deposit">Calculate Deposit</button>
+      <button id="export-excel">Save Daily Deposit Sheet</button>
+      <button id="print-preview">Print Preview</button>
     </div>
   </div>
 
   <script>
-    // Tab logic
-    document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
-      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-      document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
-      t.classList.add('active');
-      document.getElementById(t.dataset.target).classList.add('active');
-    }));
-
-    // Read URL params
-    const params = new URLSearchParams(location.search);
-    const store = params.get('store')||'';
-    const tendered = parseFloat(params.get('tendered')||0);
-    const tax = parseFloat(params.get('tax')||0);
-
-    // Close Shift populate
-    document.getElementById('cs-store').textContent = store;
-    document.getElementById('cs-tendered').textContent = tendered.toFixed(2);
-    document.getElementById('cs-tax').textContent = tax.toFixed(2);
-
-    // Coin flipper data
-    const coins = [
-      {name:'Quarters', par:10, value:0.25},
-      {name:'Dimes', par:5, value:0.10},
-      {name:'Nickels', par:4, value:0.05},
-      {name:'Pennies', par:1, value:0.01},
-      {name:'Dollar Coins', par:0, value:1.00},
-    ];
-    const tbody = document.querySelector('#coin-table tbody');
-    coins.forEach(c=>{
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td style="text-align:left">${c.name}</td><td>${c.par}</td><td><input type=number step=1 min=0 data-name="${c.name}" data-par="${c.par}" data-val="${c.value}" value="${c.par}"></td><td class="act-${c.name}">OK</td>`;
-      tbody.appendChild(tr);
+  document.addEventListener('DOMContentLoaded', ()=>{
+    // Tabs
+    document.querySelectorAll('.tab').forEach(t=>{
+      t.onclick=()=>{
+        document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+        t.classList.add('active');
+        document.getElementById(t.dataset.target).classList.add('active');
+      };
     });
 
-    function updateCoins(){
-      let coinAdj=0;
-      document.querySelectorAll('#coin-table tbody tr').forEach(row=>{
-        const inp = row.querySelector('input');
-        const par=+inp.dataset.par;
-        const cnt=+inp.value;
-        const name=inp.dataset.name;
-        const diff=cnt-par;
-        coinAdj += diff*inp.dataset.val;
-        const cell = row.querySelector('td:last-child');
-        if(diff>0) cell.textContent = `Remove ${diff}`;
-        else if(diff<0) cell.textContent = `Add ${-diff}`;
-        else cell.textContent = 'OK';
+    // Pull URL params
+    const params=new URLSearchParams(location.search);
+    const tendered=+params.get('tendered')||0;
+    const taxes=parseFloat(params.get('tax'))||0; // raw taxes
+    const store=params.get('store')||'Unknown';
+
+    // Close Shift
+    document.getElementById('calc-close-shift').onclick=()=>{
+      const b=+document.getElementById('bills').value||0;
+      document.getElementById('bills-display').textContent=b.toFixed(2);
+      let ca=0;
+      document.querySelectorAll('.coin').forEach(i=>{
+        const p=+i.dataset.par, v=+i.value||0, d=v-p;
+        ca+=d;
+        let disp;
+        if (Math.abs(d)<0.005) disp='OK';
+        else {
+          const sign=d>0 ? 'Remove ' : 'Add ';
+          disp=sign+Math.abs(d).toFixed(2);
+        }
+        document.getElementById('act-'+i.id).textContent = disp;
       });
-      document.getElementById('cs-coin-adj').value = coinAdj.toFixed(2);
-      const bills = parseFloat(document.getElementById('cs-bills').value)||0;
-      const drop = bills + coinAdj;
-      document.getElementById('cs-cash-drop').value = drop.toFixed(2);
-    }
-    document.querySelectorAll('#coin-table input, #cs-bills').forEach(el=>el.addEventListener('input', updateCoins));
-    updateCoins();
+      document.getElementById('coin-adjustment').textContent=ca.toFixed(2);
+      document.getElementById('cash-drop').textContent=(b+ca).toFixed(2);
+    };
 
-    // Daily Deposit init
-    document.getElementById('dd-date').value = new Date().toISOString().slice(0,10);
-    document.getElementById('dd-store').value = store;
-    document.getElementById('dd-tendered').textContent = tendered.toFixed(2);
-    document.getElementById('dd-tax').textContent = tax.toFixed(2);
-    function updDeposit(){
-      const t= tendered;
-      const x= tax;
-      const netPos = t - x;
-      document.getElementById('dd-net-pos').textContent = netPos.toFixed(2);
+    // Setup Daily Deposit header
+    document.getElementById('dd-tendered').textContent=tendered.toFixed(2);
+    document.getElementById('dd-taxes').textContent=taxes.toFixed(2);
+    document.getElementById('dd-date').value=new Date().toISOString().slice(0,10);
+    document.getElementById('dd-venue').value=store;
+
+    // Daily Deposit calc
+    document.getElementById('calc-daily-deposit').onclick=()=>{
       // vendors
-      let vpSum=0;
-      document.querySelectorAll('.vp-amt').forEach(i=> vpSum += parseFloat(i.value)||0);
-      document.getElementById('dd-vp-total').value = vpSum.toFixed(2);
-      document.getElementById('dd-vp-total2').textContent = vpSum.toFixed(2);
-      document.getElementById('dd-net-dep').textContent = (netPos - vpSum).toFixed(2);
-      // coin adjustments
-      let ccSum=0;
-      document.querySelectorAll('.cc-amt').forEach(i=> ccSum += parseFloat(i.value)||0);
-      document.getElementById('dd-coin-adj').value = ccSum.toFixed(2);
-      const closeCash = parseFloat(document.getElementById('dd-closing-cash').value)||0;
-      document.getElementById('dd-cash-coins').value = (closeCash+ccSum).toFixed(2);
-      const act = closeCash+ccSum;
-      document.getElementById('dd-actual').textContent = act.toFixed(2);
-      const netDep = netPos - vpSum;
-      document.getElementById('dd-net-dep2').textContent = netDep.toFixed(2);
-      document.getElementById('dd-diff').textContent = (act-netDep).toFixed(2);
-    }
-    // vendor rows
-    const vpList = document.getElementById('vp-list');
-    for(let i=0;i<5;i++){
-      const div = document.createElement('div');
-      div.innerHTML = `
-        <input type=text placeholder="Desc" class="vp-desc">
-        <input type=number placeholder="Amount" class="vp-amt" style="width:30%;">
-      `;
-      vpList.appendChild(div);
-    }
-    // coin adjust fields
-    const ccList = document.getElementById('cc-list');
-    for(let i=0;i<6;i++){
-      const div = document.createElement('div');
-      div.innerHTML = `<input type=number class="cc-amt" placeholder="Coin Adj #${i+1}">`;
-      ccList.appendChild(div);
-    }
-    document.querySelectorAll('.vp-amt, .cc-amt, #dd-closing-cash').forEach(el=>el.addEventListener('input', updDeposit));
-    updDeposit();
+      let tv=0;
+      const vendorRows=document.querySelectorAll('.vendor-row');
+      vendorRows.forEach(row=>{
+        const amt=row.querySelector('.vendor-amt');
+        tv+=+amt.value||0;
+      });
+      document.getElementById('total-vendor').textContent=tv.toFixed(2);
+      // net sales
+      const netSales=tendered - taxes;
+      document.getElementById('dd-net-sales').textContent=netSales.toFixed(2);
+      const netAfterBills=netSales - tv;
+      document.getElementById('dd-net-after-bills').textContent=netAfterBills.toFixed(2);
+      // cash & coins
+      const cc=+document.getElementById('closing-cash').value||0;
+      let sumSh=0;
+      document.querySelectorAll('.shift-coin').forEach(i=> sumSh+=+i.value||0 );
+      document.getElementById('total-coin-adjust-shifts').textContent=sumSh.toFixed(2);
+      const tcc=cc+sumSh;
+      document.getElementById('total-cash-coins').textContent=tcc.toFormatted(2);
+      // results
+      document.getElementById('res-actual').textContent=tcc.toFixed(2);
+      document.getElementById('res-net-deposit').textContent=netAfterBills.toFixed(2);
+      document.getElementById('res-difference').textContent=(tcc-netAfterBills).toFixed(2);
+      // preview
+      const previewLines = [
+        `Name: ${document.getElementById('emp-name').value}`,
+        `Date: ${document.getElementById('dd-date').value}`,
+        `Venue: ${store}`,
+        '',
+        `Total Tendered: $${tendered.toFixed(2)}`,
+        `Total Taxes:   $${taxes.toFixed(2)}`,
+        `Net Sales:     $${netSales.toFixed(2)}`,
+        `Total Bills:   $${tv.toFixed(2)}`,
+        `Net After Bills: $${netAfterBills.toFixed(2)}`,
+        '',
+        `Total Closing Cash: $${cc.toFixed(2)}`,
+        `Coin Adjustments Sum: $${sumSh.toFixed(2)}`,
+        `Total Cash & Coins: $${tcc.toFixed(2)}`,
+        '',
+        `Actual Deposit: $${tcc.toFixed(2)}`,
+        `Net Deposit:    $${netAfterBills.toFixed(2)}`,
+        `Difference:     $${(tcc-netAfterBills).toFixed(2)}`,
+        '',
+        `Change Bag: $${(+document.getElementById('change-bag').value||0).toFixed(2)}`,
+        `Notes: ${document.getElementById('notes').value}`
+      ];
+      document.getElementById('preview').textContent = previewLines.join('\n');
+    };
 
-    // Save stub
-    document.getElementById('save-btn').addEventListener('click',()=>{
-      alert('Saving Excel not implemented yet');
-    });
+    // Excel export
+    document.getElementById('export-excel').onclick=()=>{
+      const wb = XLSX.utils.book_new();
+      const data = [];
+      const getText=id=>document.getElementById(id).textContent.trim();
+      const getVal=id=>document.getElementById(id).value.trim();
+      data.push(['Name', getVal('emp-name')]);
+      data.push(['Date', getVal('dd-date')]);
+      data.push(['Venue', store]);
+      data.push([]);
+      data.push(['Total Tendered', getText('dd-tendered')]);
+      data.push(['Total Taxes', getText('dd-taxes')]);
+      data.push(['Net Sales', getText('dd-net-sales')]);
+      // vendors with desc
+      const vendorRows=document.querySelectorAll('.vendor-row');
+      vendorRows.forEach((row,idx)=>{
+        const desc=row.querySelector('.vendor-desc').value.trim();
+        const amt=row.querySelector('.vendor-amt').value.trim();
+        if(desc||amt) data.push([`Bill ${idx+1}`, desc, amt]);
+      });
+      data.push(['Total Vendor Payouts', getText('total-vendor')]);
+      data.push([]);
+      data.push(['Total Closing Cash', getVal('closing-cash')]);
+      document.querySelectorAll('.shift-coin').forEach((i,idx)=>{
+        data.push([`Shift ${idx+1} Coin Adj`, i.value.trim()]);
+      });
+      data.push(['Total Coin Adjustments', getText('total-coin-adjust-shifts')]);
+      data.push(['Total Cash & Coins', getText('total-cash-coins')]);
+      data.push([]);
+      data.push(['Actual Deposit', getText('res-actual')]);
+      data.push(['Net Deposit', getText('res-net-deposit')]);
+      data.push(['Difference', getText('res-difference')]);
+      data.push([]);
+      data.push(['Change Bag', getVal('change-bag')]);
+      data.push(['Notes', document.getElementById('notes').value]);
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      XLSX.utils.book_append_sheet(wb, ws, 'Daily Deposit');
+      XLSX.writeFile(wb, `${store}_${getVal('dd-date')}_DailyDeposit.xlsx`);
+    };
+
+    // Print preview
+    document.getElementById('print-preview').onclick=()=>{
+      window.print();
+    };
+
+    // Helper to format floats
+    Number.prototype.toFormatted = function(dec) { return this.toFixed(dec); };
+  });
   </script>
 </body>
 </html>
