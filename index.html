@@ -208,6 +208,8 @@
 
   <script>
   document.addEventListener('DOMContentLoaded', ()=>{
+    console.log("DOMContentLoaded event fired."); // Log script start
+
     const round = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
 
     document.querySelectorAll('.tab').forEach(t=>{
@@ -216,21 +218,32 @@
         document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
         t.classList.add('active');
         const targetPanel = document.getElementById(t.dataset.target);
-        targetPanel.classList.add('active');
-        // After switching tab, re-evaluate focusable elements for Enter key navigation
-        setupEnterKeyNavigation(targetPanel);
+        if (targetPanel) { // Guard against null targetPanel
+            targetPanel.classList.add('active');
+            setupEnterKeyNavigation(targetPanel);
+        } else {
+            console.error("Target panel not found for tab:", t.dataset.target);
+        }
       };
     });
+    console.log("Tab click handlers attached.");
 
     const params = new URLSearchParams(location.search);
     const tendered = +params.get('tendered') || 0;
     const taxes = +params.get('tax') || 0;
     const store = params.get('store') || 'Unknown Venue';
+    console.log("URL Params:", { tendered, taxes, store });
 
     // --- Check for missing POSaBIT data ---
     const dataWarningDiv = document.getElementById('data-warning');
-    if (tendered === 0 && taxes === 0 && store === 'Unknown Venue') { // Condition for showing warning
-        dataWarningDiv.style.display = 'block';
+    console.log("Checking for data warning. Condition:", tendered === 0 && taxes === 0 && store === 'Unknown Venue');
+    if (tendered === 0 && taxes === 0 && store === 'Unknown Venue') {
+        if (dataWarningDiv) {
+            dataWarningDiv.style.display = 'block';
+            console.log("Data warning div displayed.");
+        } else {
+            console.error("data-warning div not found!");
+        }
     }
 
 
@@ -241,37 +254,53 @@
     const cashDropDisplay = document.getElementById('cash-drop');
     const coinInputs = document.querySelectorAll('.coin');
 
+    // Ensure critical elements exist before defining functions that use them
+    if (!billsInput || !billsDisplay || !coinAdjustmentDisplay || !cashDropDisplay || !coinInputs.length) {
+        console.error("One or more critical elements for 'Close Shift' tab are missing!");
+        // return; // Optionally stop further script execution if elements are critical for basic operation
+    }
+    console.log("Close Shift tab elements obtained.");
+
+
     document.getElementById('calc-close-shift').onclick = () => {
-      const billsValue = +billsInput.value || 0;
-      billsDisplay.textContent = billsValue.toFixed(2);
-      let totalCoinAdjustment = 0;
-      coinInputs.forEach(input => {
-        const par = +input.dataset.par;
-        const counted = +input.value || 0;
-        const valueCounted = input.id === 'dollarcoins' ? counted : counted;
-        const valuePar = input.id === 'dollarcoins' ? par : par;
-        let diff = 0;
-        if (input.id === 'dollarcoins') {
-            diff = counted * 1.00;
-        } else {
-            diff = valueCounted - valuePar;
-        }
-        totalCoinAdjustment += diff;
-        const actionCell = document.getElementById('act-' + input.id);
-        if (Math.abs(diff) < 0.001) {
-          actionCell.textContent = 'OK';
-          actionCell.style.color = 'green';
-        } else if (diff > 0) {
-          actionCell.textContent = `Remove ${diff.toFixed(2)}`;
-          actionCell.style.color = 'red';
-        } else {
-          actionCell.textContent = `Add ${Math.abs(diff).toFixed(2)}`;
-           actionCell.style.color = 'blue';
-        }
-      });
-      coinAdjustmentDisplay.textContent = totalCoinAdjustment.toFixed(2);
-      cashDropDisplay.textContent = (billsValue + totalCoinAdjustment).toFixed(2);
+      try { // Add try-catch within the handler
+        const billsValue = billsInput ? (+billsInput.value || 0) : 0; // Guard billsInput
+        if(billsDisplay) billsDisplay.textContent = billsValue.toFixed(2);
+
+        let totalCoinAdjustment = 0;
+        coinInputs.forEach(input => {
+          const par = +input.dataset.par;
+          const counted = +input.value || 0;
+          const valueCounted = input.id === 'dollarcoins' ? counted : counted;
+          const valuePar = input.id === 'dollarcoins' ? par : par;
+          let diff = 0;
+          if (input.id === 'dollarcoins') {
+              diff = counted * 1.00;
+          } else {
+              diff = valueCounted - valuePar;
+          }
+          totalCoinAdjustment += diff;
+          const actionCell = document.getElementById('act-' + input.id);
+          if (actionCell) { // Guard actionCell
+            if (Math.abs(diff) < 0.001) {
+              actionCell.textContent = 'OK';
+              actionCell.style.color = 'green';
+            } else if (diff > 0) {
+              actionCell.textContent = `Remove ${diff.toFixed(2)}`;
+              actionCell.style.color = 'red';
+            } else {
+              actionCell.textContent = `Add ${Math.abs(diff).toFixed(2)}`;
+              actionCell.style.color = 'blue';
+            }
+          }
+        });
+        if(coinAdjustmentDisplay) coinAdjustmentDisplay.textContent = totalCoinAdjustment.toFixed(2);
+        if(cashDropDisplay) cashDropDisplay.textContent = (billsValue + totalCoinAdjustment).toFixed(2);
+      } catch (e) {
+        console.error("Error in calc-close-shift handler:", e);
+      }
     };
+    console.log("calc-close-shift click handler defined.");
 
     // --- Daily Deposit Tab Logic ---
     const ddTenderedDisplay = document.getElementById('dd-tendered');
@@ -289,219 +318,265 @@
     const changeBagInput = document.getElementById('change-bag');
     const notesInput = document.getElementById('notes');
     const empNameInput = document.getElementById('emp-name');
+    const ddDateInput = document.getElementById('dd-date');
+    const ddVenueInput = document.getElementById('dd-venue');
 
-    ddTenderedDisplay.textContent = tendered.toFixed(2);
-    ddTaxesDisplay.textContent = taxes.toFixed(2);
-    document.getElementById('dd-date').value = new Date().toISOString().slice(0,10);
-    document.getElementById('dd-venue').value = store;
+    if (!ddTenderedDisplay || !ddTaxesDisplay || !ddNetSalesDisplay || !totalVendorDisplay ||
+        !ddNetAfterBillsDisplay || !closingCashInput || !totalCoinAdjustShiftsDisplay ||
+        !totalCashCoinsDisplay || !resActualDisplay || !resNetDepositDisplay ||
+        !resDifferenceDisplay || !previewArea || !changeBagInput || !notesInput ||
+        !empNameInput || !ddDateInput || !ddVenueInput) {
+        console.error("One or more critical elements for 'Daily Deposit' tab are missing!");
+        // return; // Optionally stop
+    }
+    console.log("Daily Deposit tab elements obtained.");
+
+    if(ddTenderedDisplay) ddTenderedDisplay.textContent = tendered.toFixed(2);
+    if(ddTaxesDisplay) ddTaxesDisplay.textContent = taxes.toFixed(2);
+    if(ddDateInput) ddDateInput.value = new Date().toISOString().slice(0,10);
+    if(ddVenueInput) ddVenueInput.value = store;
+    console.log("Initial Daily Deposit fields populated.");
+
 
     document.getElementById('calc-daily-deposit').onclick = () => {
-      let totalVendorPayouts = 0;
-      document.querySelectorAll('.vendor-amount').forEach(input => {
-        totalVendorPayouts += +input.value || 0;
-      });
-      totalVendorDisplay.textContent = totalVendorPayouts.toFixed(2);
-      const netSales = round(tendered - taxes);
-      ddNetSalesDisplay.textContent = netSales.toFixed(2);
-      const netDepositAfterBills = round(netSales - totalVendorPayouts);
-      ddNetAfterBillsDisplay.textContent = netDepositAfterBills.toFixed(2);
-      const totalClosingCash = +closingCashInput.value || 0;
-      let totalShiftCoinAdjustments = 0;
-      document.querySelectorAll('.shift-coin').forEach(input => {
-        totalShiftCoinAdjustments += +input.value || 0;
-      });
-      totalCoinAdjustShiftsDisplay.textContent = totalShiftCoinAdjustments.toFixed(2);
-      const totalCashAndCoins = round(totalClosingCash + totalShiftCoinAdjustments);
-      totalCashCoinsDisplay.textContent = totalCashAndCoins.toFixed(2);
-      const actualDeposit = totalCashAndCoins;
-      resActualDisplay.textContent = actualDeposit.toFixed(2);
-      resNetDepositDisplay.textContent = netDepositAfterBills.toFixed(2);
-      const difference = round(actualDeposit - netDepositAfterBills);
-      resDifferenceDisplay.textContent = difference.toFixed(2);
-       if (Math.abs(difference) < 0.01) {
-          resDifferenceDisplay.style.color = 'green';
-       } else if (difference > 0) {
-          resDifferenceDisplay.style.color = 'blue';
-       } else {
-           resDifferenceDisplay.style.color = 'red';
-       }
+      try { // Add try-catch within the handler
+        let totalVendorPayouts = 0;
+        document.querySelectorAll('.vendor-amount').forEach(input => {
+          totalVendorPayouts += +input.value || 0;
+        });
+        if(totalVendorDisplay) totalVendorDisplay.textContent = totalVendorPayouts.toFixed(2);
 
-      const vendorRows = [];
-      document.querySelectorAll('#vendor-list .vendor-row').forEach((row, idx) => {
-         const desc = row.querySelector('.vendor-desc').value.trim();
-         const amount = +row.querySelector('.vendor-amount').value || 0;
-         if(desc || amount > 0) {
-            vendorRows.push(`  ${idx+1}. ${desc || '(No Description)'}: $${amount.toFixed(2)}`);
-         }
-      });
-      const shiftAdjustRows = [];
-      document.querySelectorAll('.shift-coin').forEach((input, idx) => {
-          const adj = +input.value || 0;
-          if (adj !== 0) {
-            shiftAdjustRows.push(`  Shift ${idx+1}: $${adj.toFixed(2)}`);
+        const netSales = round(tendered - taxes);
+        if(ddNetSalesDisplay) ddNetSalesDisplay.textContent = netSales.toFixed(2);
+
+        const netDepositAfterBills = round(netSales - totalVendorPayouts);
+        if(ddNetAfterBillsDisplay) ddNetAfterBillsDisplay.textContent = netDepositAfterBills.toFixed(2);
+
+        const totalClosingCash = closingCashInput ? (+closingCashInput.value || 0) : 0;
+        let totalShiftCoinAdjustments = 0;
+        document.querySelectorAll('.shift-coin').forEach(input => {
+          totalShiftCoinAdjustments += +input.value || 0;
+        });
+        if(totalCoinAdjustShiftsDisplay) totalCoinAdjustShiftsDisplay.textContent = totalShiftCoinAdjustments.toFixed(2);
+
+        const totalCashAndCoins = round(totalClosingCash + totalShiftCoinAdjustments);
+        if(totalCashCoinsDisplay) totalCashCoinsDisplay.textContent = totalCashAndCoins.toFixed(2);
+
+        const actualDeposit = totalCashAndCoins;
+        if(resActualDisplay) resActualDisplay.textContent = actualDeposit.toFixed(2);
+        if(resNetDepositDisplay) resNetDepositDisplay.textContent = netDepositAfterBills.toFixed(2);
+
+        const difference = round(actualDeposit - netDepositAfterBills);
+        if(resDifferenceDisplay) {
+            resDifferenceDisplay.textContent = difference.toFixed(2);
+            if (Math.abs(difference) < 0.01) {
+              resDifferenceDisplay.style.color = 'green';
+            } else if (difference > 0) {
+              resDifferenceDisplay.style.color = 'blue';
+            } else {
+              resDifferenceDisplay.style.color = 'red';
+            }
+        }
+
+        const vendorRows = [];
+        document.querySelectorAll('#vendor-list .vendor-row').forEach((row, idx) => {
+          const descEl = row.querySelector('.vendor-desc');
+          const amountEl = row.querySelector('.vendor-amount');
+          const desc = descEl ? descEl.value.trim() : '';
+          const amount = amountEl ? (+amountEl.value || 0) : 0;
+          if(desc || amount > 0) {
+              vendorRows.push(`  ${idx+1}. ${desc || '(No Description)'}: $${amount.toFixed(2)}`);
           }
-      });
-      const previewLines = [
-        `----- Daily Deposit Summary -----`,
-        `Name: ${empNameInput.value || 'N/A'}`,
-        `Date: ${document.getElementById('dd-date').value}`,
-        `Venue: ${store}`,
-        `---------------------------------`,
-        `Total Tendered:      $${tendered.toFixed(2)}`,
-        `Total Taxes:         $${taxes.toFixed(2)}`,
-        `Net Sales:           $${netSales.toFixed(2)}`,
-        `---------------------------------`,
-        `Vendor Payouts/Bills:`,
-        ...(vendorRows.length > 0 ? vendorRows : ['  (None)']),
-        `Total Payouts:       $${totalVendorPayouts.toFixed(2)}`,
-        `Net Dep After Bills: $${netDepositAfterBills.toFixed(2)}`,
-        `---------------------------------`,
-        `Total Closing Cash:  $${totalClosingCash.toFixed(2)}`,
-         `Shift Coin Adjustments:`,
-        ...(shiftAdjustRows.length > 0 ? shiftAdjustRows : ['  (None)']),
-        `Total Adjustments:   $${totalShiftCoinAdjustments.toFixed(2)}`,
-        `Total Cash & Coins:  $${totalCashAndCoins.toFixed(2)}`,
-        `---------------------------------`,
-        `Actual Deposit:      $${actualDeposit.toFixed(2)}`,
-        `Net Deposit Req:     $${netDepositAfterBills.toFixed(2)}`,
-        `Difference:          $${difference.toFixed(2)} ${Math.abs(difference) < 0.01 ? '(OK)' : (difference > 0 ? '(Over)' : '(Short)')}`,
-        `---------------------------------`,
-        `Money from Change Bag: $${(+changeBagInput.value||0).toFixed(2)}`,
-        `Notes: ${notesInput.value || '(None)'}`,
-         `---------------------------------`
-      ];
-      previewArea.textContent = previewLines.join('\n');
+        });
+        const shiftAdjustRows = [];
+        document.querySelectorAll('.shift-coin').forEach((input, idx) => {
+            const adj = +input.value || 0;
+            if (adj !== 0) {
+              shiftAdjustRows.push(`  Shift ${idx+1}: $${adj.toFixed(2)}`);
+            }
+        });
+        const currentEmpName = empNameInput ? empNameInput.value : 'N/A';
+        const currentDate = ddDateInput ? ddDateInput.value : new Date().toISOString().slice(0,10);
+        const currentChangeBag = changeBagInput ? (+changeBagInput.value||0).toFixed(2) : '0.00';
+        const currentNotes = notesInput ? notesInput.value : '(None)';
+
+        const previewLines = [
+          `----- Daily Deposit Summary -----`,
+          `Name: ${currentEmpName}`,
+          `Date: ${currentDate}`,
+          `Venue: ${store}`,
+          `---------------------------------`,
+          `Total Tendered:      $${tendered.toFixed(2)}`,
+          `Total Taxes:         $${taxes.toFixed(2)}`,
+          `Net Sales:           $${netSales.toFixed(2)}`,
+          `---------------------------------`,
+          `Vendor Payouts/Bills:`,
+          ...(vendorRows.length > 0 ? vendorRows : ['  (None)']),
+          `Total Payouts:       $${totalVendorPayouts.toFixed(2)}`,
+          `Net Dep After Bills: $${netDepositAfterBills.toFixed(2)}`,
+          `---------------------------------`,
+          `Total Closing Cash:  $${totalClosingCash.toFixed(2)}`,
+          `Shift Coin Adjustments:`,
+          ...(shiftAdjustRows.length > 0 ? shiftAdjustRows : ['  (None)']),
+          `Total Adjustments:   $${totalShiftCoinAdjustments.toFixed(2)}`,
+          `Total Cash & Coins:  $${totalCashAndCoins.toFixed(2)}`,
+          `---------------------------------`,
+          `Actual Deposit:      $${actualDeposit.toFixed(2)}`,
+          `Net Deposit Req:     $${netDepositAfterBills.toFixed(2)}`,
+          `Difference:          $${difference.toFixed(2)} ${Math.abs(difference) < 0.01 ? '(OK)' : (difference > 0 ? '(Over)' : '(Short)')}`,
+          `---------------------------------`,
+          `Money from Change Bag: $${currentChangeBag}`,
+          `Notes: ${currentNotes}`,
+          `---------------------------------`
+        ];
+        if(previewArea) previewArea.textContent = previewLines.join('\n');
+      } catch (e) {
+        console.error("Error in calc-daily-deposit handler:", e);
+      }
     };
+    console.log("calc-daily-deposit click handler defined.");
 
     document.getElementById('export-excel').onclick = () => {
-      document.getElementById('calc-daily-deposit').click();
-      const wb = XLSX.utils.book_new();
-      const data = [];
-      const headerRows = [];
-      const getVal = id => (document.getElementById(id).value || '').trim();
-      const getNumFromTxt = id => {
-          const text = (document.getElementById(id).textContent || '').replace(/[$,]/g, '');
-          return parseFloat(text) || 0;
-      }
-       const getNumFromVal = id => {
-            const text = (document.getElementById(id).value || '').replace(/[$,]/g, '');
-            return parseFloat(text) || 0;
-       }
+      try {
+        const calcButton = document.getElementById('calc-daily-deposit');
+        if (calcButton) calcButton.click(); // Ensure calculations are up to date
 
-      headerRows.push(data.length);
-      data.push(['----- Daily Deposit Summary -----']);
-      data.push(['Name', getVal('emp-name')]);
-      data.push(['Date', getVal('dd-date')]);
-      data.push(['Venue', store]);
-      data.push([]);
-      headerRows.push(data.length);
-      data.push(['----- Sales & Taxes -----']);
-      data.push(['Total Tendered', tendered]);
-      data.push(['Total Taxes', taxes]);
-      data.push(['Net from POSaBIT Sales', getNumFromTxt('dd-net-sales')]);
-      data.push([]);
-      headerRows.push(data.length);
-      data.push(['----- Vendor Payouts / Bills -----']);
-      let vendorCount = 0;
-      document.querySelectorAll('#vendor-list .vendor-row').forEach((row) => {
-        const descInput = row.querySelector('.vendor-desc');
-        const amountInput = row.querySelector('.vendor-amount');
-        const desc = descInput ? descInput.value.trim() : '';
-        const amount = amountInput ? (+amountInput.value || 0) : 0;
-        if (desc || amount > 0) {
-          data.push([`  ${desc || '(No Description)'}`, amount]);
-          vendorCount++;
+        const wb = XLSX.utils.book_new();
+        const data = [];
+        const headerRows = [];
+        const getVal = id => { const el = document.getElementById(id); return el ? (el.value || '').trim() : ''; };
+        const getNumFromTxt = id => {
+            const el = document.getElementById(id);
+            const text = el ? (el.textContent || '').replace(/[$,]/g, '') : '';
+            return parseFloat(text) || 0;
         }
-      });
-       if (vendorCount === 0) { data.push(['  (None)']); }
-      data.push([]);
-      data.push(['Total Vendor Payouts', getNumFromTxt('total-vendor')]);
-      data.push(['Net Deposit After Bills', getNumFromTxt('dd-net-after-bills')]);
-      data.push([]);
-      headerRows.push(data.length);
-      data.push(['----- Cash & Coins -----']);
-      data.push(['Total Closing Cash', getNumFromVal('closing-cash')]);
-      data.push([]);
-      headerRows.push(data.length);
-      data.push(['Shift Coin Adjustments']);
-      let adjCount = 0;
-       document.querySelectorAll('.shift-coin').forEach((i, idx) => {
-          const adjValue = +i.value || 0;
-           if (adjValue !== 0) {
-              data.push([`  Shift ${idx + 1}`, adjValue]);
-              adjCount++;
-           }
-      });
-      if (adjCount === 0) { data.push(['  (None)']); }
-      data.push([]);
-      data.push(['Total Closing Coin Adjustments', getNumFromTxt('total-coin-adjust-shifts')]);
-      data.push(['Total Cash & Coins', getNumFromTxt('total-cash-coins')]);
-      data.push([]);
-      headerRows.push(data.length);
-      data.push(['----- Results -----']);
-      data.push(['Actual Deposit', getNumFromTxt('res-actual')]);
-      data.push(['Net Deposit', getNumFromTxt('res-net-deposit')]);
-      data.push(['Difference', getNumFromTxt('res-difference')]);
-      data.push([]);
-      headerRows.push(data.length);
-      data.push(['----- Extras -----']);
-      data.push(['Money from Change Bag', getNumFromVal('change-bag')]);
-      data.push(['Notes', getVal('notes')]);
-      const ws = XLSX.utils.aoa_to_sheet(data);
-      ws['!cols'] = [{ wch: 35 }, { wch: 15 }];
-      const merges = [];
-      headerRows.forEach(rowIndex => {
-        const cellRef = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
-        if (ws[cellRef]) {
-             ws[cellRef].s = { font: { bold: true } };
-             merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 1 } });
-         }
-         if (ws[cellRef] && ws[cellRef].v === 'Shift Coin Adjustments') {
-              ws[cellRef].s = { font: { bold: true } };
-         }
-      });
-      ws['!merges'] = merges;
-       const currencyFormat = '$#,##0.00';
-       Object.keys(ws).forEach(cellRef => {
-           if (cellRef[0] === '!' || headerRows.includes(XLSX.utils.decode_cell(cellRef).r)) return;
-           const cell = ws[cellRef];
-           const col = XLSX.utils.decode_cell(cellRef).c;
-           if (col === 1 && cell.t === 'n') {
-                cell.z = currencyFormat;
-           }
-       });
-      XLSX.utils.book_append_sheet(wb, ws, 'Daily Deposit');
-      const filename = `${store.replace(/ /g, '_')}_${getVal('dd-date')}_DailyDeposit.xlsx`;
-      XLSX.writeFile(wb, filename);
+        const getNumFromVal = id => {
+            const el = document.getElementById(id);
+            const text = el ? (el.value || '').replace(/[$,]/g, '') : '';
+            return parseFloat(text) || 0;
+        }
+
+        headerRows.push(data.length);
+        data.push(['----- Daily Deposit Summary -----']);
+        data.push(['Name', getVal('emp-name')]);
+        data.push(['Date', getVal('dd-date')]);
+        data.push(['Venue', store]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['----- Sales & Taxes -----']);
+        data.push(['Total Tendered', tendered]);
+        data.push(['Total Taxes', taxes]);
+        data.push(['Net from POSaBIT Sales', getNumFromTxt('dd-net-sales')]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['----- Vendor Payouts / Bills -----']);
+        let vendorCount = 0;
+        document.querySelectorAll('#vendor-list .vendor-row').forEach((row) => {
+          const descInput = row.querySelector('.vendor-desc');
+          const amountInput = row.querySelector('.vendor-amount');
+          const desc = descInput ? descInput.value.trim() : '';
+          const amount = amountInput ? (+amountInput.value || 0) : 0;
+          if (desc || amount > 0) {
+            data.push([`  ${desc || '(No Description)'}`, amount]);
+            vendorCount++;
+          }
+        });
+        if (vendorCount === 0) { data.push(['  (None)']); }
+        data.push([]);
+        data.push(['Total Vendor Payouts', getNumFromTxt('total-vendor')]);
+        data.push(['Net Deposit After Bills', getNumFromTxt('dd-net-after-bills')]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['----- Cash & Coins -----']);
+        data.push(['Total Closing Cash', getNumFromVal('closing-cash')]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['Shift Coin Adjustments']);
+        let adjCount = 0;
+        document.querySelectorAll('.shift-coin').forEach((i, idx) => {
+            const adjValue = +i.value || 0;
+            if (adjValue !== 0) {
+                data.push([`  Shift ${idx + 1}`, adjValue]);
+                adjCount++;
+            }
+        });
+        if (adjCount === 0) { data.push(['  (None)']); }
+        data.push([]);
+        data.push(['Total Closing Coin Adjustments', getNumFromTxt('total-coin-adjust-shifts')]);
+        data.push(['Total Cash & Coins', getNumFromTxt('total-cash-coins')]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['----- Results -----']);
+        data.push(['Actual Deposit', getNumFromTxt('res-actual')]);
+        data.push(['Net Deposit', getNumFromTxt('res-net-deposit')]);
+        data.push(['Difference', getNumFromTxt('res-difference')]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['----- Extras -----']);
+        data.push(['Money from Change Bag', getNumFromVal('change-bag')]);
+        data.push(['Notes', getVal('notes')]);
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        ws['!cols'] = [{ wch: 35 }, { wch: 15 }];
+        const merges = [];
+        headerRows.forEach(rowIndex => {
+          const cellRef = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
+          if (ws[cellRef]) {
+                ws[cellRef].s = { font: { bold: true } };
+                merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 1 } });
+            }
+            if (ws[cellRef] && ws[cellRef].v === 'Shift Coin Adjustments') {
+                ws[cellRef].s = { font: { bold: true } };
+            }
+        });
+        ws['!merges'] = merges;
+        const currencyFormat = '$#,##0.00';
+        Object.keys(ws).forEach(cellRef => {
+            if (cellRef[0] === '!' || headerRows.includes(XLSX.utils.decode_cell(cellRef).r)) return;
+            const cell = ws[cellRef];
+            const col = XLSX.utils.decode_cell(cellRef).c;
+            if (col === 1 && cell.t === 'n') {
+                  cell.z = currencyFormat;
+            }
+        });
+        XLSX.utils.book_append_sheet(wb, ws, 'Daily Deposit');
+        const filename = `${store.replace(/ /g, '_')}_${getVal('dd-date')}_DailyDeposit.xlsx`;
+        XLSX.writeFile(wb, filename);
+      } catch (e) {
+        console.error("Error in export-excel handler:", e);
+        alert("Error generating Excel file. Check console for details.");
+      }
     };
+    console.log("export-excel click handler defined.");
+
 
     // --- Enter Key Navigation ---
     let focusableElements = [];
     function setupEnterKeyNavigation(panelElement) {
+        if (!panelElement) return; // Guard
         focusableElements = Array.from(
             panelElement.querySelectorAll('input[type="text"], input[type="number"], textarea')
-        ).filter(el => !el.readOnly && el.offsetParent !== null); // Only visible and non-readonly
+        ).filter(el => !el.readOnly && el.offsetParent !== null);
 
         focusableElements.forEach((el, index) => {
             el.addEventListener('keydown', (event) => {
                 if (event.key === 'Enter' || event.keyCode === 13) {
-                    event.preventDefault(); // Prevent default form submission or newline in textarea
+                    event.preventDefault();
                     const nextElement = focusableElements[index + 1];
                     if (nextElement) {
                         nextElement.focus();
-                        if (nextElement.select) { // Select text in next input if possible
+                        if (nextElement.select) {
                             nextElement.select();
                         }
                     } else {
-                        // Optional: if it's the last element, maybe focus a submit button or blur
                         if (panelElement.id === 'close-shift') {
-                            document.getElementById('calc-close-shift').focus();
+                            const calcButton = document.getElementById('calc-close-shift');
+                            if (calcButton) calcButton.focus();
                         } else if (panelElement.id === 'daily-deposit') {
-                           // If last element is notes, maybe blur or focus calc button
-                           if (el.id === 'notes' && document.getElementById('calc-daily-deposit')) {
-                                document.getElementById('calc-daily-deposit').focus();
-                           } else if (focusableElements[index + 1] === undefined) { // truly last focusable
-                                document.getElementById('calc-daily-deposit').focus();
+                           const dailyDepositCalcButton = document.getElementById('calc-daily-deposit');
+                           if (el.id === 'notes' && dailyDepositCalcButton) {
+                                dailyDepositCalcButton.focus();
+                           } else if (focusableElements[index + 1] === undefined && dailyDepositCalcButton) {
+                                dailyDepositCalcButton.focus();
                            }
                         }
                     }
@@ -509,18 +584,45 @@
             });
         });
     }
+    console.log("setupEnterKeyNavigation function defined.");
 
-    // Initial setup for Enter key navigation on the active panel
     const activePanel = document.querySelector('.panel.active');
     if (activePanel) {
         setupEnterKeyNavigation(activePanel);
+        console.log("Enter key navigation setup for active panel:", activePanel.id);
+    } else {
+        console.warn("No active panel found for initial Enter key navigation setup.");
     }
 
-    // Trigger initial calculations
-    document.getElementById('calc-close-shift').click();
-    document.getElementById('calc-daily-deposit').click();
+    // Defer initial calculations slightly
+    setTimeout(() => {
+        console.log("Attempting deferred initial clicks.");
+        try {
+            const calcCloseShiftButton = document.getElementById('calc-close-shift');
+            if (calcCloseShiftButton) {
+                calcCloseShiftButton.click();
+                console.log("Deferred click on calc-close-shift successful.");
+            } else {
+                console.error("calc-close-shift button not found for deferred click.");
+            }
+        } catch (e) {
+            console.error("Error during deferred initial calc-close-shift:", e);
+        }
 
+        try {
+            const calcDailyDepositButton = document.getElementById('calc-daily-deposit');
+            if (calcDailyDepositButton) {
+                calcDailyDepositButton.click();
+                console.log("Deferred click on calc-daily-deposit successful.");
+            } else {
+                console.error("calc-daily-deposit button not found for deferred click.");
+            }
+        } catch (e) {
+            console.error("Error during deferred initial calc-daily-deposit:", e);
+        }
+    }, 0); // setTimeout with 0ms delay
+
+    console.log("DOMContentLoaded script finished.");
   });
-  </script>
-</body>
+  </script></body>
 </html>
