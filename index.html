@@ -30,8 +30,7 @@
     em { color: #555; font-size: .9em; font-style: italic; display: block; margin-top: -4px; margin-bottom: 8px; }
     .summary-line, .results-line { margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
     .summary-line strong, .results-line strong { flex-basis: 60%; text-align: left; }
-    .summary-line span { flex-basis: 35%; text-align: right; font-weight: bold; background-color: #f0f0f0; padding: 4px 6px; border-radius: 3px;}
-    .results-line span { flex-basis: 35%; text-align: right; font-weight: bold; padding: 4px 6px; border-radius: 3px; }
+    .summary-line span, .results-line span { flex-basis: 35%; text-align: right; font-weight: bold; background-color: #f0f0f0; padding: 4px 6px; border-radius: 3px;}
     .vendor-row { display: flex; gap: 10px; margin-bottom: 5px; align-items: center;}
     .vendor-row input.vendor-desc { flex-grow: 1; }
     .vendor-row input.vendor-amount { width: 120px; flex-shrink: 0; }
@@ -112,7 +111,7 @@
 
   <div id="daily-deposit" class="panel">
     <div id="data-warning" class="data-missing-warning">
-        <p><strong>Important:</strong> Data from POSaBIT might be missing or incomplete.</p>
+        <p><strong>ERROR:</strong> Data from POSaBIT might be missing or incomplete.</p>
         <p>Please ensure you run the bookmarklet on one of the official POSaBIT dashboard pages:</p>
         <ul>
             <li>Sandy: <a href="https://app.posabit.com/merchant/7836/venue/3495/dashboard" target="_blank">app.posabit.com/merchant/7836/venue/3495/dashboard</a></li>
@@ -220,25 +219,26 @@
     const taxes = +params.get('tax') || 0;
     const store = params.get('store') || 'Unknown Venue';
 
-    const ddTenderedDisplay = document.getElementById('dd-tendered');
-    const ddTaxesDisplay = document.getElementById('dd-taxes');
-    const dataWarningDiv = document.getElementById('data-warning');
-
-    ddTenderedDisplay.textContent = tendered.toFixed(2);
-    ddTaxesDisplay.textContent = taxes.toFixed(2);
-
     // --- Check for missing POSaBIT data ---
-    function checkAndShowWarning() {
-      if (tendered === 0 && taxes === 0 && store === 'Unknown Venue') {
+    const dataWarningDiv = document.getElementById('data-warning');
+    if (tendered === 0 && taxes === 0 && store === 'Unknown Venue') { // Condition for showing warning
         dataWarningDiv.style.display = 'block';
-      } else {
-        dataWarningDiv.style.display = 'none'; // Ensure it's hidden if data is present
-      }
+    } else {
+        dataWarningDiv.style.display = 'none'; // Hide if data is present
     }
 
-    checkAndShowWarning(); // Call on page load
 
     // --- Close Shift Tab Logic ---
     const billsInput = document.getElementById('bills');
     const billsDisplay = document.getElementById('bills-display');
-    const coinAdjustment
+    const coinAdjustmentDisplay = document.getElementById('coin-adjustment');
+    const cashDropDisplay = document.getElementById('cash-drop');
+    const coinInputs = document.querySelectorAll('.coin');
+
+    document.getElementById('calc-close-shift').onclick = () => {
+      const billsValue = +billsInput.value || 0;
+      billsDisplay.textContent = billsValue.toFixed(2);
+      let totalCoinAdjustment = 0;
+      coinInputs.forEach(input => {
+        const par = +input.dataset.par;
+        const counted = +input.value || 0;
