@@ -648,5 +648,47 @@
   });
 </script>
 
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const storeField = document.getElementById('dd-venue');
+  const vendorList = document.getElementById('vendor-list');
+  const defaultVendors = {
+    "Foster": [
+      { desc: "Foster Rent", amount: 350 },
+      { desc: "Foster Bills", amount: 150 }
+    ],
+    "Division": [
+      { desc: "Division Rent", amount: 350 },
+      { desc: "Division Bills", amount: 150 }
+    ],
+    "Sandy": [
+      { desc: "Sandy Rent", amount: 350 },
+      { desc: "Sandy Bills", amount: 200 }
+    ]
+  };
+
+  function applyDefaults(store) {
+    const entries = defaultVendors[store] || [];
+    const rows = vendorList.querySelectorAll(".vendor-row");
+    rows.forEach((row, index) => {
+      const desc = row.querySelector(".vendor-desc");
+      const amount = row.querySelector(".vendor-amount");
+      if (index < entries.length) {
+        desc.value = entries[index].desc;
+        amount.value = entries[index].amount;
+      } else {
+        desc.value = "";
+        amount.value = 0;
+      }
+    });
+  }
+
+  if (storeField && storeField.value) {
+    applyDefaults(storeField.value);
+  }
+});
+</script>
+
 </body>
 </html>
