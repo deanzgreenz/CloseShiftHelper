@@ -633,23 +633,18 @@
   document.addEventListener("DOMContentLoaded", function () {
     const dateField = document.getElementById("dd-date");
     const storeField = document.getElementById("dd-venue");
-    const nameField = document.getElementById("emp-name");
     const tenderedEl = document.getElementById("dd-tendered");
     const taxEl = document.getElementById("dd-taxes");
 
-    const date = getParam("date");
-    const store = getParam("store");
-    const tendered = getParam("tendered");
-    const tax = getParam("tax");
+    const dateParam = getParam("date");
+    const storeParam = getParam("store");
+    const tenderedParam = getParam("tendered");
+    const taxParam = getParam("tax");
 
-    if (date && dateField) dateField.value = date;
-    if (store && storeField) storeField.value = store;
-    if (tendered && tenderedEl) tenderedEl.textContent = parseFloat(tendered).toFixed(2);
-    if (tax && taxEl) taxEl.textContent = parseFloat(tax).toFixed(2);
-
-    if (nameField && nameField.placeholder === "Your name") {
-      nameField.focus();
-    }
+    if (dateField && dateParam) dateField.value = dateParam;
+    if (storeField && storeParam) storeField.value = storeParam;
+    if (tenderedEl && tenderedParam) tenderedEl.textContent = parseFloat(tenderedParam).toFixed(2);
+    if (taxEl && taxParam) taxEl.textContent = parseFloat(taxParam).toFixed(2);
   });
 </script>
 
