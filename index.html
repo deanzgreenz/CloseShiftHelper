@@ -624,5 +624,34 @@
 
     console.log("DOMContentLoaded script finished.");
   });
-  </script></body>
+  </script>
+<script>
+  function getParam(param) {
+    return new URLSearchParams(window.location.search).get(param);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const dateField = document.getElementById("dd-date");
+    const storeField = document.getElementById("dd-venue");
+    const nameField = document.getElementById("emp-name");
+    const tenderedEl = document.getElementById("dd-tendered");
+    const taxEl = document.getElementById("dd-taxes");
+
+    const date = getParam("date");
+    const store = getParam("store");
+    const tendered = getParam("tendered");
+    const tax = getParam("tax");
+
+    if (date && dateField) dateField.value = date;
+    if (store && storeField) storeField.value = store;
+    if (tendered && tenderedEl) tenderedEl.textContent = parseFloat(tendered).toFixed(2);
+    if (tax && taxEl) taxEl.textContent = parseFloat(tax).toFixed(2);
+
+    if (nameField && nameField.placeholder === "Your name") {
+      nameField.focus();
+    }
+  });
+</script>
+
+</body>
 </html>
