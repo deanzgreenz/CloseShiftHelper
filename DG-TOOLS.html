@@ -229,11 +229,18 @@
     });
     console.log("Tab click handlers attached.");
 
+    // --- Parse new URL params for cash/debit/cashback ---
     const params = new URLSearchParams(location.search);
-    const tendered = +params.get('tendered') || 0;
-    const taxes = +params.get('tax') || 0;
+    const cashTotal = parseFloat(params.get('cashTotal')) || 0.00;
+    const cashbackTotal = parseFloat(params.get('cashbackTotal')) || 0.00;
+    const debitTotal = parseFloat(params.get('debitTotal')) || 0.00;
+    const taxes = parseFloat(params.get('tax')) || 0.00;
     const store = params.get('store') || 'Unknown Venue';
-    console.log("URL Params:", { tendered, taxes, store });
+    // Derived values
+    const netDebitDeposit = debitTotal - cashbackTotal;
+    const netTendered = cashTotal + debitTotal;
+    const netSales = netTendered - taxes;
+    console.log("URL Params:", { cashTotal, cashbackTotal, debitTotal, taxes, store });
 
     // --- Check for missing POSaBIT data ---
     const dataWarningDiv = document.getElementById('data-warning');
@@ -332,23 +339,48 @@
     }
     console.log("Daily Deposit tab elements obtained.");
 
-    if(ddTenderedDisplay) ddTenderedDisplay.textContent = tendered.toFixed(2);
+    // Update new fields in UI (add if not present)
+    function ensureField(label, id, afterId) {
+      if (!document.getElementById(id)) {
+        const ref = document.getElementById(afterId);
+        if (ref) {
+          const div = document.createElement('div');
+          div.className = 'summary-line';
+          div.innerHTML = `<strong>${label}</strong> <span id="${id}">0.00</span>`;
+          ref.parentNode.insertBefore(div, ref.nextSibling);
+        }
+      }
+    }
+    // Insert new summary fields if not present
+    ensureField('Cash Total ($):', 'dd-cash-total', 'dd-tendered');
+    ensureField('Cashback Given ($):', 'dd-cashback-total', 'dd-cash-total');
+    ensureField('Debit Card Total ($):', 'dd-debit-total', 'dd-cashback-total');
+    ensureField('Net Debit Deposit ($):', 'dd-net-debit', 'dd-debit-total');
+
+    // Set values for all summary fields
+    if(document.getElementById('dd-cash-total')) document.getElementById('dd-cash-total').textContent = cashTotal.toFixed(2);
+    if(document.getElementById('dd-cashback-total')) document.getElementById('dd-cashback-total').textContent = cashbackTotal.toFixed(2);
+    if(document.getElementById('dd-debit-total')) document.getElementById('dd-debit-total').textContent = debitTotal.toFixed(2);
+    if(document.getElementById('dd-net-debit')) document.getElementById('dd-net-debit').textContent = netDebitDeposit.toFixed(2);
+    if(ddTenderedDisplay) ddTenderedDisplay.textContent = netTendered.toFixed(2);
     if(ddTaxesDisplay) ddTaxesDisplay.textContent = taxes.toFixed(2);
+    if(ddNetSalesDisplay) ddNetSalesDisplay.textContent = netSales.toFixed(2);
     if(ddDateInput) ddDateInput.value = new Date().toISOString().slice(0,10);
     if(ddVenueInput) ddVenueInput.value = store;
     console.log("Initial Daily Deposit fields populated.");
 
 
     document.getElementById('calc-daily-deposit').onclick = () => {
-      try { // Add try-catch within the handler
+      try {
         let totalVendorPayouts = 0;
         document.querySelectorAll('.vendor-amount').forEach(input => {
           totalVendorPayouts += +input.value || 0;
         });
         if(totalVendorDisplay) totalVendorDisplay.textContent = totalVendorPayouts.toFixed(2);
 
-        const netSales = round(tendered - taxes);
+        // Use new netSales and netTendered
         if(ddNetSalesDisplay) ddNetSalesDisplay.textContent = netSales.toFixed(2);
+        if(ddTenderedDisplay) ddTenderedDisplay.textContent = netTendered.toFixed(2);
 
         const netDepositAfterBills = round(netSales - totalVendorPayouts);
         if(ddNetAfterBillsDisplay) ddNetAfterBillsDisplay.textContent = netDepositAfterBills.toFixed(2);
@@ -363,7 +395,11 @@
         const totalCashAndCoins = round(totalClosingCash + totalShiftCoinAdjustments);
         if(totalCashCoinsDisplay) totalCashCoinsDisplay.textContent = totalCashAndCoins.toFixed(2);
 
-        const actualDeposit = totalCashAndCoins;
+        // --- Net Debit Deposit ---
+        if(document.getElementById('dd-net-debit')) document.getElementById('dd-net-debit').textContent = netDebitDeposit.toFixed(2);
+
+        // --- Actual Deposit includes Net Debit Deposit ---
+        const actualDeposit = totalCashAndCoins + netDebitDeposit;
         if(resActualDisplay) resActualDisplay.textContent = actualDeposit.toFixed(2);
         if(resNetDepositDisplay) resNetDepositDisplay.textContent = netDepositAfterBills.toFixed(2);
 
@@ -401,13 +437,19 @@
         const currentChangeBag = changeBagInput ? (+changeBagInput.value||0).toFixed(2) : '0.00';
         const currentNotes = notesInput ? notesInput.value : '(None)';
 
+        // --- Preview summary with new fields ---
         const previewLines = [
           `----- Daily Deposit Summary -----`,
           `Name: ${currentEmpName}`,
           `Date: ${currentDate}`,
           `Venue: ${store}`,
           `---------------------------------`,
-          `Total Tendered:      $${tendered.toFixed(2)}`,
+          `Cash Total:          $${cashTotal.toFixed(2)}`,
+          `Debit Total:         $${debitTotal.toFixed(2)}`,
+          `Cashback Given:      $${cashbackTotal.toFixed(2)}`,
+          `Net Debit Deposit:   $${netDebitDeposit.toFixed(2)}`,
+          `---------------------------------`,
+          `Total Tendered:      $${netTendered.toFixed(2)}`,
           `Total Taxes:         $${taxes.toFixed(2)}`,
           `Net Sales:           $${netSales.toFixed(2)}`,
           `---------------------------------`,
@@ -440,7 +482,7 @@
     document.getElementById('export-excel').onclick = () => {
       try {
         const calcButton = document.getElementById('calc-daily-deposit');
-        if (calcButton) calcButton.click(); // Ensure calculations are up to date
+        if (calcButton) calcButton.click();
 
         const wb = XLSX.utils.book_new();
         const data = [];
@@ -464,10 +506,16 @@
         data.push(['Venue', store]);
         data.push([]);
         headerRows.push(data.length);
+        data.push(['----- Cash & Debit Details -----']);
+        data.push(['Cash Total', cashTotal]);
+        data.push(['Debit Total', debitTotal]);
+        data.push(['Cashback Given', cashbackTotal]);
+        data.push(['Net Debit Deposit', netDebitDeposit]);
+        data.push([]);
         data.push(['----- Sales & Taxes -----']);
-        data.push(['Total Tendered', tendered]);
+        data.push(['Total Tendered', netTendered]);
         data.push(['Total Taxes', taxes]);
-        data.push(['Net from POSaBIT Sales', getNumFromTxt('dd-net-sales')]);
+        data.push(['Net from POSaBIT Sales', netSales]);
         data.push([]);
         headerRows.push(data.length);
         data.push(['----- Vendor Payouts / Bills -----']);
