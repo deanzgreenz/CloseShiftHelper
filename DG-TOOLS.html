@@ -252,16 +252,26 @@
     const netDebitDeposit = debitTotal - cashbackTotal;
     const netTendered = cashTotal + debitTotal;
     const netSales = netTendered - taxes;
-    // For warning logic, check if all are zero
-    const allZero = (cashTotal === 0 && debitTotal === 0 && taxes === 0);
+    // For warning logic, show warning if both netTendered and taxes are zero (regardless of store)
+    const netTenderedZero = netTendered === 0;
+    const taxesZero = taxes === 0;
     console.log("URL Params:", { cashTotal, cashbackTotal, debitTotal, taxes, store });
 
     // --- Check for missing POSaBIT data ---
     const dataWarningDiv = document.getElementById('data-warning');
-    if (allZero && store === 'Unknown Venue') {
+    // Always hide first, then show if needed
+    if (dataWarningDiv) dataWarningDiv.style.display = 'none';
+    // Show warning if both netTendered and taxes are zero (regardless of store)
+    if (netTenderedZero && taxesZero) {
         if (dataWarningDiv) {
+            // Move warning to top of body if not already there
+            if (dataWarningDiv.parentElement !== document.body) {
+                document.body.insertBefore(dataWarningDiv, document.body.firstChild);
+            }
             dataWarningDiv.style.display = 'block';
-            console.log("Data warning div displayed.");
+            // Optionally scroll to top for visibility
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            console.log("Data warning div displayed at top.");
         } else {
             console.error("data-warning div not found!");
         }
