@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Close Shift & Daily Deposit Helper</title>
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+    h1, h2, h3 { margin: .5em 0; }
+    .tabs { display: flex; margin-bottom: 20px; }
+    .tab {
+      padding: 8px 16px; cursor: pointer;
+      border: 1px solid #ccc; background: #f0f0f0;
+      margin-right: 4px; border-bottom: none; /* For better active tab look */
+      border-radius: 4px 4px 0 0;
+    }
+    .tab.active { background: #fff; font-weight: bold; border-bottom: 1px solid #fff; position: relative; top: 1px;}
+    .panel { border: 1px solid #ccc; padding: 20px; display: none; border-radius: 0 4px 4px 4px; }
+    .panel.active { display: block; }
+    label { display: block; margin: .5em 0 0.2em; font-weight: bold; }
+    input, textarea { width: 100%; box-sizing: border-box; padding: 8px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    input[type="number"] { text-align: right; }
+    table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    th { background-color: #f9f9f9; }
+    .small-input { width: 100px; display: inline-block; padding: 6px; }
+    .actions { margin-top: 20px; text-align: right; }
+    .actions button { padding: 10px 16px; margin-left: 8px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 1em; }
+    .actions button:hover { background-color: #0056b3; }
+    em { color: #555; font-size: .9em; font-style: italic; display: block; margin-top: -4px; margin-bottom: 8px; }
+    .summary-line, .results-line { margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .summary-line strong, .results-line strong { flex-basis: 60%; text-align: left; }
+    .summary-line span, .results-line span { flex-basis: 35%; text-align: right; font-weight: bold; background-color: #f0f0f0; padding: 4px 6px; border-radius: 3px;}
+    .vendor-row { display: flex; gap: 10px; margin-bottom: 5px; align-items: center;}
+    .vendor-row input.vendor-desc { flex-grow: 1; }
+    .vendor-row input.vendor-amount { width: 120px; flex-shrink: 0; }
+    .shift-coin-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+    .shift-coin-row label { width: 60px; margin: 0; font-weight: normal; text-align: right; }
+    .shift-coin-row input { width: 100px; margin: 0; }
+    #preview { background:#f9f9f9; padding:15px; border: 1px solid #eee; border-radius: 4px; white-space: pre-wrap; font-family: monospace; max-height: 300px; overflow-y: auto; margin-top: 10px;}
+    .data-missing-warning { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; margin-bottom: 20px; border-radius: 4px; display: none; } /* Initially hidden */
+    .data-missing-warning p { margin: 0 0 10px 0; }
+    .data-missing-warning ul { margin: 0; padding-left: 20px; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+  <h1>Close Shift & Daily Deposit Helper</h1>
+
+  <div id="data-warning" class="data-missing-warning">
+      <p><strong>Important:</strong> Data from POSaBIT might be missing or incomplete.</p>
+      <p>Please ensure you run the bookmarklet on one of the official POSaBIT dashboard pages:</p>
+      <ul>
+          <li>Sandy: <a href="https://app.posabit.com/merchant/7836/venue/3495/dashboard" target="_blank">app.posabit.com/merchant/7836/venue/3495/dashboard</a></li>
+          <li>Foster: <a href="https://app.posabit.com/merchant/7836/venue/3496/dashboard" target="_blank">app.posabit.com/merchant/7836/venue/3496/dashboard</a></li>
+          <li>Division: <a href="https://app.posabit.com/merchant/7836/venue/3497/dashboard" target="_blank">app.posabit.com/merchant/7836/venue/3497/dashboard</a></li>
+      </ul>
+      <p>If "Total Tendered" and "Total Taxes" below are $0.00, the data was likely not pulled correctly.</p>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-target="close-shift">Close Shift</div>
+    <div class="tab" data-target="daily-deposit">Complete Daily Deposit</div>
+  </div>
+
+  <div id="close-shift" class="panel active">
+    <h2>Close Shift</h2>
+    <label for="bills">Bills (After $480 removed for Reset Till):</label>
+    <input id="bills" type="number" step="0.01" value="0">
+
+    <h3>Till Flipper</h3>
+    <table>
+      <thead>
+        <tr><th>Coin</th><th>Par ($)</th><th>Counted ($)</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Quarters</td><td>$10.00</td>
+          <td><input class="coin small-input" data-par="10" id="quarters" type="number" step="0.01" value="10.00"></td>
+          <td id="act-quarters">OK</td>
+        </tr>
+        <tr>
+          <td>Dimes</td><td>$5.00</td>
+          <td><input class="coin small-input" data-par="5" id="dimes" type="number" step="0.01" value="5.00"></td>
+          <td id="act-dimes">OK</td>
+        </tr>
+        <tr>
+          <td>Nickels</td><td>$4.00</td>
+          <td><input class="coin small-input" data-par="4" id="nickels" type="number" step="0.01" value="4.00"></td>
+          <td id="act-nickels">OK</td>
+        </tr>
+        <tr>
+          <td>Pennies</td><td>$1.00</td>
+          <td><input class="coin small-input" data-par="1" id="pennies" type="number" step="0.01" value="1.00"></td>
+          <td id="act-pennies">OK</td>
+        </tr>
+        <tr>
+          <td>Dollar Coins</td><td>$0.00</td>
+          <td><input class="coin small-input" data-par="0" id="dollarcoins" type="number" step="1.00" value="0"></td>
+          <td id="act-dollarcoins">OK</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="summary-line">
+      <strong>Total Cash From Cash Counter ($):</strong>
+      <span id="bills-display">0.00</span>
+    </div>
+    <div class="summary-line">
+      <strong>Total Coin Adjustment ($):</strong>
+      <span id="coin-adjustment">0.00</span>
+    </div>
+     <em>Write this total on the Shift Report Receipt</em>
+    <div class="summary-line">
+      <strong>Total Cash Drop ($):</strong>
+      <span id="cash-drop">0.00</span>
+    </div>
+     <em>Enter in POSaBIT Closing Drop field, and $500 in Left In Drawer field.</em>
+
+    <div class="actions">
+      <button id="calc-close-shift">Calculate Close Shift</button>
+    </div>
+  </div>
+
+  <div id="daily-deposit" class="panel">
+    <h2>Complete Daily Deposit</h2>
+
+    <label for="emp-name">Name:</label>
+    <input id="emp-name" placeholder="Your name">
+
+    <label for="dd-date">Date:</label>
+    <input id="dd-date" type="date">
+
+    <label for="dd-venue">Venue:</label>
+    <input id="dd-venue" readonly>
+
+    <h3>Vendor Payouts / Bills</h3>
+    <div id="vendor-list">
+      <div class="vendor-row">
+          <input class="vendor-desc" type="text" placeholder="Description 1">
+          <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
+      </div>
+      <div class="vendor-row">
+          <input class="vendor-desc" type="text" placeholder="Description 2">
+          <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
+      </div>
+      <div class="vendor-row">
+          <input class="vendor-desc" type="text" placeholder="Description 3">
+          <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
+      </div>
+      <div class="vendor-row">
+          <input class="vendor-desc" type="text" placeholder="Description 4">
+          <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
+      </div>
+      <div class="vendor-row">
+          <input class="vendor-desc" type="text" placeholder="Description 5">
+          <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
+      </div>
+    </div>
+    <div class="summary-line">
+      <strong>Total Vendor Payouts ($):</strong>
+      <span id="total-vendor">0.00</span>
+    </div>
+
+    <h3>Totals</h3>
+    <div class="summary-line"><strong>Total Tendered ($):</strong> <span id="dd-tendered">0.00</span></div>
+    <div class="summary-line"><strong>Total Taxes ($):</strong> <span id="dd-taxes">0.00</span></div>
+    <div class="summary-line"><strong>Net from POSaBIT Sales ($):</strong> <span id="dd-net-sales">0.00</span></div>
+    <div class="summary-line"><strong>Net Deposit After Bills ($):</strong> <span id="dd-net-after-bills">0.00</span></div>
+
+    <h3>Cash &amp; Coins</h3>
+    <div>
+      <label for="closing-cash">Total Closing Cash ($):</label>
+      <input id="closing-cash" type="number" step="0.01" value="0">
+      <em>Remaining cash after setting aside Taxes &amp; Bills</em>
+    </div>
+    <h4>Shift Coin Adjustments</h4>
+    <div id="coin-adjust-list">
+      <div class="shift-coin-row"><label for="shift1-coin">Shift 1:</label> <input id="shift1-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
+      <div class="shift-coin-row"><label for="shift2-coin">Shift 2:</label> <input id="shift2-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
+      <div class="shift-coin-row"><label for="shift3-coin">Shift 3:</label> <input id="shift3-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
+      <div class="shift-coin-row"><label for="shift4-coin">Shift 4:</label> <input id="shift4-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
+      <div class="shift-coin-row"><label for="shift5-coin">Shift 5:</label> <input id="shift5-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
+      <div class="shift-coin-row"><label for="shift6-coin">Shift 6:</label> <input id="shift6-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
+    </div>
+     <div class="summary-line"><strong>Total Closing Coin Adjustments ($):</strong> <span id="total-coin-adjust-shifts">0.00</span></div>
+     <div class="summary-line"><strong>Total Cash &amp; Coins ($):</strong> <span id="total-cash-coins">0.00</span></div>
+
+    <h3>Results</h3>
+    <div class="results-line"><strong>Actual Deposit ($):</strong> <span id="res-actual">0.00</span></div>
+    <div class="results-line"><strong>Net Deposit ($):</strong> <span id="res-net-deposit">0.00</span></div>
+    <div class="results-line"><strong>Difference ($):</strong> <span id="res-difference">0.00</span></div>
+
+    <label for="change-bag">Money from Change Bag ($):</label>
+    <input id="change-bag" type="number" step="0.01" value="0">
+
+    <label for="notes">Notes:</label>
+    <textarea id="notes" rows="3"></textarea>
+
+    <h3>Preview</h3>
+    <pre id="preview"></pre>
+
+    <div class="actions">
+      <button id="calc-daily-deposit">Calculate & Preview Deposit</button>
+      <button id="export-excel">Save Daily Deposit Sheet</button>
+    </div>
+  </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', ()=>{
+    console.log("DOMContentLoaded event fired."); // Log script start
+
+    const round = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
+
+    document.querySelectorAll('.tab').forEach(t=>{
+      t.onclick=()=>{
+        document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+        t.classList.add('active');
+        const targetPanel = document.getElementById(t.dataset.target);
+        if (targetPanel) { // Guard against null targetPanel
+            targetPanel.classList.add('active');
+            setupEnterKeyNavigation(targetPanel);
+        } else {
+            console.error("Target panel not found for tab:", t.dataset.target);
+        }
+      };
+    });
+    console.log("Tab click handlers attached.");
+
+    const params = new URLSearchParams(location.search);
+    const tendered = +params.get('tendered') || 0;
+    const taxes = +params.get('tax') || 0;
+    const store = params.get('store') || 'Unknown Venue';
+    console.log("URL Params:", { tendered, taxes, store });
+
+    // --- Check for missing POSaBIT data ---
+    const dataWarningDiv = document.getElementById('data-warning');
+    console.log("Checking for data warning. Condition:", tendered === 0 && taxes === 0 && store === 'Unknown Venue');
+    if (tendered === 0 && taxes === 0 && store === 'Unknown Venue') {
+        if (dataWarningDiv) {
+            dataWarningDiv.style.display = 'block';
+            console.log("Data warning div displayed.");
+        } else {
+            console.error("data-warning div not found!");
+        }
+    }
+
+
+    // --- Close Shift Tab Logic ---
+    const billsInput = document.getElementById('bills');
+    const billsDisplay = document.getElementById('bills-display');
+    const coinAdjustmentDisplay = document.getElementById('coin-adjustment');
+    const cashDropDisplay = document.getElementById('cash-drop');
+    const coinInputs = document.querySelectorAll('.coin');
+
+    // Ensure critical elements exist before defining functions that use them
+    if (!billsInput || !billsDisplay || !coinAdjustmentDisplay || !cashDropDisplay || !coinInputs.length) {
+        console.error("One or more critical elements for 'Close Shift' tab are missing!");
+        // return; // Optionally stop further script execution if elements are critical for basic operation
+    }
+    console.log("Close Shift tab elements obtained.");
+
+
+    document.getElementById('calc-close-shift').onclick = () => {
+      try { // Add try-catch within the handler
+        const billsValue = billsInput ? (+billsInput.value || 0) : 0; // Guard billsInput
+        if(billsDisplay) billsDisplay.textContent = billsValue.toFixed(2);
+
+        let totalCoinAdjustment = 0;
+        coinInputs.forEach(input => {
+          const par = +input.dataset.par;
+          const counted = +input.value || 0;
+          const valueCounted = input.id === 'dollarcoins' ? counted : counted;
+          const valuePar = input.id === 'dollarcoins' ? par : par;
+          let diff = 0;
+          if (input.id === 'dollarcoins') {
+              diff = counted * 1.00;
+          } else {
+              diff = valueCounted - valuePar;
+          }
+          totalCoinAdjustment += diff;
+          const actionCell = document.getElementById('act-' + input.id);
+          if (actionCell) { // Guard actionCell
+            if (Math.abs(diff) < 0.001) {
+              actionCell.textContent = 'OK';
+              actionCell.style.color = 'green';
+            } else if (diff > 0) {
+              actionCell.textContent = `Remove ${diff.toFixed(2)}`;
+              actionCell.style.color = 'red';
+            } else {
+              actionCell.textContent = `Add ${Math.abs(diff).toFixed(2)}`;
+              actionCell.style.color = 'blue';
+            }
+          }
+        });
+        if(coinAdjustmentDisplay) coinAdjustmentDisplay.textContent = totalCoinAdjustment.toFixed(2);
+        if(cashDropDisplay) cashDropDisplay.textContent = (billsValue + totalCoinAdjustment).toFixed(2);
+      } catch (e) {
+        console.error("Error in calc-close-shift handler:", e);
+      }
+    };
+    console.log("calc-close-shift click handler defined.");
+
+    // --- Daily Deposit Tab Logic ---
+    const ddTenderedDisplay = document.getElementById('dd-tendered');
+    const ddTaxesDisplay = document.getElementById('dd-taxes');
+    const ddNetSalesDisplay = document.getElementById('dd-net-sales');
+    const totalVendorDisplay = document.getElementById('total-vendor');
+    const ddNetAfterBillsDisplay = document.getElementById('dd-net-after-bills');
+    const closingCashInput = document.getElementById('closing-cash');
+    const totalCoinAdjustShiftsDisplay = document.getElementById('total-coin-adjust-shifts');
+    const totalCashCoinsDisplay = document.getElementById('total-cash-coins');
+    const resActualDisplay = document.getElementById('res-actual');
+    const resNetDepositDisplay = document.getElementById('res-net-deposit');
+    const resDifferenceDisplay = document.getElementById('res-difference');
+    const previewArea = document.getElementById('preview');
+    const changeBagInput = document.getElementById('change-bag');
+    const notesInput = document.getElementById('notes');
+    const empNameInput = document.getElementById('emp-name');
+    const ddDateInput = document.getElementById('dd-date');
+    const ddVenueInput = document.getElementById('dd-venue');
+
+    if (!ddTenderedDisplay || !ddTaxesDisplay || !ddNetSalesDisplay || !totalVendorDisplay ||
+        !ddNetAfterBillsDisplay || !closingCashInput || !totalCoinAdjustShiftsDisplay ||
+        !totalCashCoinsDisplay || !resActualDisplay || !resNetDepositDisplay ||
+        !resDifferenceDisplay || !previewArea || !changeBagInput || !notesInput ||
+        !empNameInput || !ddDateInput || !ddVenueInput) {
+        console.error("One or more critical elements for 'Daily Deposit' tab are missing!");
+        // return; // Optionally stop
+    }
+    console.log("Daily Deposit tab elements obtained.");
+
+    if(ddTenderedDisplay) ddTenderedDisplay.textContent = tendered.toFixed(2);
+    if(ddTaxesDisplay) ddTaxesDisplay.textContent = taxes.toFixed(2);
+    if(ddDateInput) ddDateInput.value = new Date().toISOString().slice(0,10);
+    if(ddVenueInput) ddVenueInput.value = store;
+    console.log("Initial Daily Deposit fields populated.");
+
+
+    document.getElementById('calc-daily-deposit').onclick = () => {
+      try { // Add try-catch within the handler
+        let totalVendorPayouts = 0;
+        document.querySelectorAll('.vendor-amount').forEach(input => {
+          totalVendorPayouts += +input.value || 0;
+        });
+        if(totalVendorDisplay) totalVendorDisplay.textContent = totalVendorPayouts.toFixed(2);
+
+        const netSales = round(tendered - taxes);
+        if(ddNetSalesDisplay) ddNetSalesDisplay.textContent = netSales.toFixed(2);
+
+        const netDepositAfterBills = round(netSales - totalVendorPayouts);
+        if(ddNetAfterBillsDisplay) ddNetAfterBillsDisplay.textContent = netDepositAfterBills.toFixed(2);
+
+        const totalClosingCash = closingCashInput ? (+closingCashInput.value || 0) : 0;
+        let totalShiftCoinAdjustments = 0;
+        document.querySelectorAll('.shift-coin').forEach(input => {
+          totalShiftCoinAdjustments += +input.value || 0;
+        });
+        if(totalCoinAdjustShiftsDisplay) totalCoinAdjustShiftsDisplay.textContent = totalShiftCoinAdjustments.toFixed(2);
+
+        const totalCashAndCoins = round(totalClosingCash + totalShiftCoinAdjustments);
+        if(totalCashCoinsDisplay) totalCashCoinsDisplay.textContent = totalCashAndCoins.toFixed(2);
+
+        const actualDeposit = totalCashAndCoins;
+        if(resActualDisplay) resActualDisplay.textContent = actualDeposit.toFixed(2);
+        if(resNetDepositDisplay) resNetDepositDisplay.textContent = netDepositAfterBills.toFixed(2);
+
+        const difference = round(actualDeposit - netDepositAfterBills);
+        if(resDifferenceDisplay) {
+            resDifferenceDisplay.textContent = difference.toFixed(2);
+            if (Math.abs(difference) < 0.01) {
+              resDifferenceDisplay.style.color = 'green';
+            } else if (difference > 0) {
+              resDifferenceDisplay.style.color = 'blue';
+            } else {
+              resDifferenceDisplay.style.color = 'red';
+            }
+        }
+
+        const vendorRows = [];
+        document.querySelectorAll('#vendor-list .vendor-row').forEach((row, idx) => {
+          const descEl = row.querySelector('.vendor-desc');
+          const amountEl = row.querySelector('.vendor-amount');
+          const desc = descEl ? descEl.value.trim() : '';
+          const amount = amountEl ? (+amountEl.value || 0) : 0;
+          if(desc || amount > 0) {
+              vendorRows.push(`  ${idx+1}. ${desc || '(No Description)'}: $${amount.toFixed(2)}`);
+          }
+        });
+        const shiftAdjustRows = [];
+        document.querySelectorAll('.shift-coin').forEach((input, idx) => {
+            const adj = +input.value || 0;
+            if (adj !== 0) {
+              shiftAdjustRows.push(`  Shift ${idx+1}: $${adj.toFixed(2)}`);
+            }
+        });
+        const currentEmpName = empNameInput ? empNameInput.value : 'N/A';
+        const currentDate = ddDateInput ? ddDateInput.value : new Date().toISOString().slice(0,10);
+        const currentChangeBag = changeBagInput ? (+changeBagInput.value||0).toFixed(2) : '0.00';
+        const currentNotes = notesInput ? notesInput.value : '(None)';
+
+        const previewLines = [
+          `----- Daily Deposit Summary -----`,
+          `Name: ${currentEmpName}`,
+          `Date: ${currentDate}`,
+          `Venue: ${store}`,
+          `---------------------------------`,
+          `Total Tendered:      $${tendered.toFixed(2)}`,
+          `Total Taxes:         $${taxes.toFixed(2)}`,
+          `Net Sales:           $${netSales.toFixed(2)}`,
+          `---------------------------------`,
+          `Vendor Payouts/Bills:`,
+          ...(vendorRows.length > 0 ? vendorRows : ['  (None)']),
+          `Total Payouts:       $${totalVendorPayouts.toFixed(2)}`,
+          `Net Dep After Bills: $${netDepositAfterBills.toFixed(2)}`,
+          `---------------------------------`,
+          `Total Closing Cash:  $${totalClosingCash.toFixed(2)}`,
+          `Shift Coin Adjustments:`,
+          ...(shiftAdjustRows.length > 0 ? shiftAdjustRows : ['  (None)']),
+          `Total Adjustments:   $${totalShiftCoinAdjustments.toFixed(2)}`,
+          `Total Cash & Coins:  $${totalCashAndCoins.toFixed(2)}`,
+          `---------------------------------`,
+          `Actual Deposit:      $${actualDeposit.toFixed(2)}`,
+          `Net Deposit Req:     $${netDepositAfterBills.toFixed(2)}`,
+          `Difference:          $${difference.toFixed(2)} ${Math.abs(difference) < 0.01 ? '(OK)' : (difference > 0 ? '(Over)' : '(Short)')}`,
+          `---------------------------------`,
+          `Money from Change Bag: $${currentChangeBag}`,
+          `Notes: ${currentNotes}`,
+          `---------------------------------`
+        ];
+        if(previewArea) previewArea.textContent = previewLines.join('\n');
+      } catch (e) {
+        console.error("Error in calc-daily-deposit handler:", e);
+      }
+    };
+    console.log("calc-daily-deposit click handler defined.");
+
+    document.getElementById('export-excel').onclick = () => {
+      try {
+        const calcButton = document.getElementById('calc-daily-deposit');
+        if (calcButton) calcButton.click(); // Ensure calculations are up to date
+
+        const wb = XLSX.utils.book_new();
+        const data = [];
+        const headerRows = [];
+        const getVal = id => { const el = document.getElementById(id); return el ? (el.value || '').trim() : ''; };
+        const getNumFromTxt = id => {
+            const el = document.getElementById(id);
+            const text = el ? (el.textContent || '').replace(/[$,]/g, '') : '';
+            return parseFloat(text) || 0;
+        }
+        const getNumFromVal = id => {
+            const el = document.getElementById(id);
+            const text = el ? (el.value || '').replace(/[$,]/g, '') : '';
+            return parseFloat(text) || 0;
+        }
+
+        headerRows.push(data.length);
+        data.push(['----- Daily Deposit Summary -----']);
+        data.push(['Name', getVal('emp-name')]);
+        data.push(['Date', getVal('dd-date')]);
+        data.push(['Venue', store]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['----- Sales & Taxes -----']);
+        data.push(['Total Tendered', tendered]);
+        data.push(['Total Taxes', taxes]);
+        data.push(['Net from POSaBIT Sales', getNumFromTxt('dd-net-sales')]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['----- Vendor Payouts / Bills -----']);
+        let vendorCount = 0;
+        document.querySelectorAll('#vendor-list .vendor-row').forEach((row) => {
+          const descInput = row.querySelector('.vendor-desc');
+          const amountInput = row.querySelector('.vendor-amount');
+          const desc = descInput ? descInput.value.trim() : '';
+          const amount = amountInput ? (+amountInput.value || 0) : 0;
+          if (desc || amount > 0) {
+            data.push([`  ${desc || '(No Description)'}`, amount]);
+            vendorCount++;
+          }
+        });
+        if (vendorCount === 0) { data.push(['  (None)']); }
+        data.push([]);
+        data.push(['Total Vendor Payouts', getNumFromTxt('total-vendor')]);
+        data.push(['Net Deposit After Bills', getNumFromTxt('dd-net-after-bills')]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['----- Cash & Coins -----']);
+        data.push(['Total Closing Cash', getNumFromVal('closing-cash')]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['Shift Coin Adjustments']);
+        let adjCount = 0;
+        document.querySelectorAll('.shift-coin').forEach((i, idx) => {
+            const adjValue = +i.value || 0;
+            if (adjValue !== 0) {
+                data.push([`  Shift ${idx + 1}`, adjValue]);
+                adjCount++;
+            }
+        });
+        if (adjCount === 0) { data.push(['  (None)']); }
+        data.push([]);
+        data.push(['Total Closing Coin Adjustments', getNumFromTxt('total-coin-adjust-shifts')]);
+        data.push(['Total Cash & Coins', getNumFromTxt('total-cash-coins')]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['----- Results -----']);
+        data.push(['Actual Deposit', getNumFromTxt('res-actual')]);
+        data.push(['Net Deposit', getNumFromTxt('res-net-deposit')]);
+        data.push(['Difference', getNumFromTxt('res-difference')]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['----- Extras -----']);
+        data.push(['Money from Change Bag', getNumFromVal('change-bag')]);
+        data.push(['Notes', getVal('notes')]);
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        ws['!cols'] = [{ wch: 35 }, { wch: 15 }];
+        const merges = [];
+        headerRows.forEach(rowIndex => {
+          const cellRef = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
+          if (ws[cellRef]) {
+                ws[cellRef].s = { font: { bold: true } };
+                merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 1 } });
+            }
+            if (ws[cellRef] && ws[cellRef].v === 'Shift Coin Adjustments') {
+                ws[cellRef].s = { font: { bold: true } };
+            }
+        });
+        ws['!merges'] = merges;
+        const currencyFormat = '$#,##0.00';
+        Object.keys(ws).forEach(cellRef => {
+            if (cellRef[0] === '!' || headerRows.includes(XLSX.utils.decode_cell(cellRef).r)) return;
+            const cell = ws[cellRef];
+            const col = XLSX.utils.decode_cell(cellRef).c;
+            if (col === 1 && cell.t === 'n') {
+                  cell.z = currencyFormat;
+            }
+        });
+        XLSX.utils.book_append_sheet(wb, ws, 'Daily Deposit');
+        const filename = `${store.replace(/ /g, '_')}_${getVal('dd-date')}_DailyDeposit.xlsx`;
+        XLSX.writeFile(wb, filename);
+      } catch (e) {
+        console.error("Error in export-excel handler:", e);
+        alert("Error generating Excel file. Check console for details.");
+      }
+    };
+    console.log("export-excel click handler defined.");
+
+
+    // --- Enter Key Navigation ---
+    let focusableElements = [];
+    function setupEnterKeyNavigation(panelElement) {
+        if (!panelElement) return; // Guard
+        focusableElements = Array.from(
+            panelElement.querySelectorAll('input[type="text"], input[type="number"], textarea')
+        ).filter(el => !el.readOnly && el.offsetParent !== null);
+
+        focusableElements.forEach((el, index) => {
+            el.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.keyCode === 13) {
+                    event.preventDefault();
+                    const nextElement = focusableElements[index + 1];
+                    if (nextElement) {
+                        nextElement.focus();
+                        if (nextElement.select) {
+                            nextElement.select();
+                        }
+                    } else {
+                        if (panelElement.id === 'close-shift') {
+                            const calcButton = document.getElementById('calc-close-shift');
+                            if (calcButton) calcButton.focus();
+                        } else if (panelElement.id === 'daily-deposit') {
+                           const dailyDepositCalcButton = document.getElementById('calc-daily-deposit');
+                           if (el.id === 'notes' && dailyDepositCalcButton) {
+                                dailyDepositCalcButton.focus();
+                           } else if (focusableElements[index + 1] === undefined && dailyDepositCalcButton) {
+                                dailyDepositCalcButton.focus();
+                           }
+                        }
+                    }
+                }
+            });
+        });
+    }
+    console.log("setupEnterKeyNavigation function defined.");
+
+    const activePanel = document.querySelector('.panel.active');
+    if (activePanel) {
+        setupEnterKeyNavigation(activePanel);
+        console.log("Enter key navigation setup for active panel:", activePanel.id);
+    } else {
+        console.warn("No active panel found for initial Enter key navigation setup.");
+    }
+
+    // Defer initial calculations slightly
+    setTimeout(() => {
+        console.log("Attempting deferred initial clicks.");
+        try {
+            const calcCloseShiftButton = document.getElementById('calc-close-shift');
+            if (calcCloseShiftButton) {
+                calcCloseShiftButton.click();
+                console.log("Deferred click on calc-close-shift successful.");
+            } else {
+                console.error("calc-close-shift button not found for deferred click.");
+            }
+        } catch (e) {
+            console.error("Error during deferred initial calc-close-shift:", e);
+        }
+
+        try {
+            const calcDailyDepositButton = document.getElementById('calc-daily-deposit');
+            if (calcDailyDepositButton) {
+                calcDailyDepositButton.click();
+                console.log("Deferred click on calc-daily-deposit successful.");
+            } else {
+                console.error("calc-daily-deposit button not found for deferred click.");
+            }
+        } catch (e) {
+            console.error("Error during deferred initial calc-daily-deposit:", e);
+        }
+    }, 0); // setTimeout with 0ms delay
+
+    console.log("DOMContentLoaded script finished.");
+  });
+  </script>
+<script>
+  function getParam(param) {
+    return new URLSearchParams(window.location.search).get(param);
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const dateField = document.getElementById("dd-date");
+    const storeField = document.getElementById("dd-venue");
+    const tenderedEl = document.getElementById("dd-tendered");
+    const taxEl = document.getElementById("dd-taxes");
+
+    const dateParam = getParam("date");
+    const storeParam = getParam("store");
+    const tenderedParam = getParam("tendered");
+    const taxParam = getParam("tax");
+
+    if (dateField && dateParam) dateField.value = dateParam;
+    if (storeField && storeParam) storeField.value = storeParam;
+    if (tenderedEl && tenderedParam) tenderedEl.textContent = parseFloat(tenderedParam).toFixed(2);
+    if (taxEl && taxParam) taxEl.textContent = parseFloat(taxParam).toFixed(2);
+  });
+</script>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const storeField = document.getElementById('dd-venue');
+  const vendorList = document.getElementById('vendor-list');
+  const defaultVendors = {
+    "Foster": [
+      { desc: "Foster Rent", amount: 350 },
+      { desc: "Foster Bills", amount: 150 }
+    ],
+    "Division": [
+      { desc: "Division Rent", amount: 350 },
+      { desc: "Division Bills", amount: 150 }
+    ],
+    "Sandy": [
+      { desc: "Sandy Rent", amount: 350 },
+      { desc: "Sandy Bills", amount: 200 }
+    ]
+  };
+
+  function applyDefaults(store) {
+    const entries = defaultVendors[store] || [];
+    const rows = vendorList.querySelectorAll(".vendor-row");
+    rows.forEach((row, index) => {
+      const desc = row.querySelector(".vendor-desc");
+      const amount = row.querySelector(".vendor-amount");
+      if (index < entries.length) {
+        desc.value = entries[index].desc;
+        amount.value = entries[index].amount;
+      } else {
+        desc.value = "";
+        amount.value = 0;
+      }
+    });
+  }
+
+  if (storeField && storeField.value) {
+    applyDefaults(storeField.value);
+  }
+});
+</script>
+
+</body>
+</html>
