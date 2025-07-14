@@ -229,23 +229,32 @@
     });
     console.log("Tab click handlers attached.");
 
-    // --- Parse new URL params for cash/debit/cashback ---
+    // --- Parse URL params for both old and new bookmarklets ---
     const params = new URLSearchParams(location.search);
-    const cashTotal = parseFloat(params.get('cashTotal')) || 0.00;
-    const cashbackTotal = parseFloat(params.get('cashbackTotal')) || 0.00;
-    const debitTotal = parseFloat(params.get('debitTotal')) || 0.00;
-    const taxes = parseFloat(params.get('tax')) || 0.00;
-    const store = params.get('store') || 'Unknown Venue';
+    let cashTotal = parseFloat(params.get('cashTotal'));
+    let cashbackTotal = parseFloat(params.get('cashbackTotal'));
+    let debitTotal = parseFloat(params.get('debitTotal'));
+    let taxes = parseFloat(params.get('tax'));
+    let store = params.get('store') || 'Unknown Venue';
+    // Fallback for old bookmarklet: treat tendered as cashTotal if cashTotal is missing
+    if (isNaN(cashTotal)) {
+      const tendered = parseFloat(params.get('tendered'));
+      cashTotal = isNaN(tendered) ? 0.00 : tendered;
+    }
+    if (isNaN(cashbackTotal)) cashbackTotal = 0.00;
+    if (isNaN(debitTotal)) debitTotal = 0.00;
+    if (isNaN(taxes)) taxes = 0.00;
     // Derived values
     const netDebitDeposit = debitTotal - cashbackTotal;
     const netTendered = cashTotal + debitTotal;
     const netSales = netTendered - taxes;
+    // For warning logic, check if all are zero
+    const allZero = (cashTotal === 0 && debitTotal === 0 && taxes === 0);
     console.log("URL Params:", { cashTotal, cashbackTotal, debitTotal, taxes, store });
 
     // --- Check for missing POSaBIT data ---
     const dataWarningDiv = document.getElementById('data-warning');
-    console.log("Checking for data warning. Condition:", tendered === 0 && taxes === 0 && store === 'Unknown Venue');
-    if (tendered === 0 && taxes === 0 && store === 'Unknown Venue') {
+    if (allZero && store === 'Unknown Venue') {
         if (dataWarningDiv) {
             dataWarningDiv.style.display = 'block';
             console.log("Data warning div displayed.");
