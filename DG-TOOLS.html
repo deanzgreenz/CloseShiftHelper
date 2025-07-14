@@ -164,6 +164,10 @@
     </div>
 
     <h3>Totals</h3>
+    <div class="summary-line"><strong>Cash Total ($):</strong> <span id="dd-cash-total">0.00</span></div>
+    <div class="summary-line"><strong>Cashback Given ($):</strong> <span id="dd-cashback-total">0.00</span></div>
+    <div class="summary-line"><strong>Debit Card Total ($):</strong> <span id="dd-debit-total">0.00</span></div>
+    <div class="summary-line"><strong>Net Debit Deposit ($):</strong> <span id="dd-net-debit">0.00</span></div>
     <div class="summary-line"><strong>Total Tendered ($):</strong> <span id="dd-tendered">0.00</span></div>
     <div class="summary-line"><strong>Total Taxes ($):</strong> <span id="dd-taxes">0.00</span></div>
     <div class="summary-line"><strong>Net from POSaBIT Sales ($):</strong> <span id="dd-net-sales">0.00</span></div>
@@ -348,23 +352,7 @@
     }
     console.log("Daily Deposit tab elements obtained.");
 
-    // Update new fields in UI (add if not present)
-    function ensureField(label, id, afterId) {
-      if (!document.getElementById(id)) {
-        const ref = document.getElementById(afterId);
-        if (ref) {
-          const div = document.createElement('div');
-          div.className = 'summary-line';
-          div.innerHTML = `<strong>${label}</strong> <span id="${id}">0.00</span>`;
-          ref.parentNode.insertBefore(div, ref.nextSibling);
-        }
-      }
-    }
-    // Insert new summary fields if not present
-    ensureField('Cash Total ($):', 'dd-cash-total', 'dd-tendered');
-    ensureField('Cashback Given ($):', 'dd-cashback-total', 'dd-cash-total');
-    ensureField('Debit Card Total ($):', 'dd-debit-total', 'dd-cashback-total');
-    ensureField('Net Debit Deposit ($):', 'dd-net-debit', 'dd-debit-total');
+    // ...existing code...
 
     // Set values for all summary fields
     if(document.getElementById('dd-cash-total')) document.getElementById('dd-cash-total').textContent = cashTotal.toFixed(2);
