@@ -167,7 +167,6 @@
     <div class="summary-line"><strong>Cash Total ($):</strong> <span id="dd-cash-total">0.00</span></div>
     <div class="summary-line"><strong>Cashback Given ($):</strong> <span id="dd-cashback-total">0.00</span></div>
     <div class="summary-line"><strong>Debit Card Total ($):</strong> <span id="dd-debit-total">0.00</span></div>
-    <div class="summary-line"><strong>Net Debit Deposit ($):</strong> <span id="dd-net-debit">0.00</span></div>
     <div class="summary-line"><strong>Total Tendered ($):</strong> <span id="dd-tendered">0.00</span></div>
     <div class="summary-line"><strong>Total Taxes ($):</strong> <span id="dd-taxes">0.00</span></div>
     <div class="summary-line"><strong>Net from POSaBIT Sales ($):</strong> <span id="dd-net-sales">0.00</span></div>
@@ -368,7 +367,6 @@
     if(document.getElementById('dd-cash-total')) document.getElementById('dd-cash-total').textContent = cashTotal.toFixed(2);
     if(document.getElementById('dd-cashback-total')) document.getElementById('dd-cashback-total').textContent = cashbackTotal.toFixed(2);
     if(document.getElementById('dd-debit-total')) document.getElementById('dd-debit-total').textContent = debitTotal.toFixed(2);
-    if(document.getElementById('dd-net-debit')) document.getElementById('dd-net-debit').textContent = netDebitDeposit.toFixed(2);
     if(ddTenderedDisplay) ddTenderedDisplay.textContent = netTendered.toFixed(2);
     if(ddTaxesDisplay) ddTaxesDisplay.textContent = taxes.toFixed(2);
     if(ddNetSalesDisplay) ddNetSalesDisplay.textContent = netSales.toFixed(2);
@@ -402,8 +400,7 @@
         const totalCashAndCoins = round(totalClosingCash + totalShiftCoinAdjustments);
         if(totalCashCoinsDisplay) totalCashCoinsDisplay.textContent = totalCashAndCoins.toFixed(2);
 
-        // --- Net Debit Deposit ---
-        if(document.getElementById('dd-net-debit')) document.getElementById('dd-net-debit').textContent = netDebitDeposit.toFixed(2);
+        // Net Debit Deposit display removed
 
         // --- Actual Deposit includes Net Debit Deposit ---
         const actualDeposit = totalCashAndCoins + netDebitDeposit;
