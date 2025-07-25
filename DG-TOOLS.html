@@ -230,7 +230,14 @@
     if(ddTenderedDisplay) ddTenderedDisplay.textContent = netTendered.toFixed(2);
     if(ddTaxesDisplay) ddTaxesDisplay.textContent = taxes.toFixed(2);
     if(ddNetSalesDisplay) ddNetSalesDisplay.textContent = netSales.toFixed(2);
-    if(ddDateInput) ddDateInput.value = new Date().toISOString().slice(0,10);
+    if(ddDateInput) {
+      // Use local date (not UTC) for Portland/Pacific users
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      ddDateInput.value = `${year}-${month}-${day}`;
+    }
     if(ddVenueInput) ddVenueInput.value = store;
     console.log("Initial Daily Deposit fields populated.");
 
@@ -297,7 +304,17 @@
             }
         });
         const currentEmpName = empNameInput ? empNameInput.value : 'N/A';
-        const currentDate = ddDateInput ? ddDateInput.value : new Date().toISOString().slice(0,10);
+        // Use local date for preview if input is missing
+        let currentDate = '';
+        if (ddDateInput && ddDateInput.value) {
+          currentDate = ddDateInput.value;
+        } else {
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = String(now.getMonth() + 1).padStart(2, '0');
+          const day = String(now.getDate()).padStart(2, '0');
+          currentDate = `${year}-${month}-${day}`;
+        }
         const currentChangeBag = changeBagInput ? (+changeBagInput.value||0).toFixed(2) : '0.00';
         const currentNotes = notesInput ? notesInput.value : '(None)';
 
