@@ -60,67 +60,7 @@
   </div>
 
   <div class="tabs">
-    <div class="tab active" data-target="close-shift">Close Shift</div>
-    <div class="tab" data-target="daily-deposit">Complete Daily Deposit</div>
-  </div>
-
-  <div id="close-shift" class="panel active">
-    <h2>Close Shift</h2>
-    <label for="bills">Bills (After $480 removed for Reset Till):</label>
-    <input id="bills" type="number" step="0.01" value="0">
-
-    <h3>Till Flipper</h3>
-    <table>
-      <thead>
-        <tr><th>Coin</th><th>Par ($)</th><th>Counted ($)</th><th>Action</th></tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Quarters</td><td>$10.00</td>
-          <td><input class="coin small-input" data-par="10" id="quarters" type="number" step="0.01" value="10.00"></td>
-          <td id="act-quarters">OK</td>
-        </tr>
-        <tr>
-          <td>Dimes</td><td>$5.00</td>
-          <td><input class="coin small-input" data-par="5" id="dimes" type="number" step="0.01" value="5.00"></td>
-          <td id="act-dimes">OK</td>
-        </tr>
-        <tr>
-          <td>Nickels</td><td>$4.00</td>
-          <td><input class="coin small-input" data-par="4" id="nickels" type="number" step="0.01" value="4.00"></td>
-          <td id="act-nickels">OK</td>
-        </tr>
-        <tr>
-          <td>Pennies</td><td>$1.00</td>
-          <td><input class="coin small-input" data-par="1" id="pennies" type="number" step="0.01" value="1.00"></td>
-          <td id="act-pennies">OK</td>
-        </tr>
-        <tr>
-          <td>Dollar Coins</td><td>$0.00</td>
-          <td><input class="coin small-input" data-par="0" id="dollarcoins" type="number" step="1.00" value="0"></td>
-          <td id="act-dollarcoins">OK</td>
-        </tr>
-      </tbody>
-    </table>
-
-    <div class="summary-line">
-      <strong>Total Cash From Cash Counter ($):</strong>
-      <span id="bills-display">0.00</span>
-    </div>
-    <div class="summary-line">
-      <strong>Total Coin Adjustment ($):</strong>
-      <span id="coin-adjustment">0.00</span>
-    </div>
-     <em>Write this total on the Shift Report Receipt</em>
-    <div class="summary-line">
-      <strong>Total Cash Drop ($):</strong>
-      <span id="cash-drop">0.00</span>
-    </div>
-     <em>Enter in POSaBIT Closing Drop field, and $500 in Left In Drawer field.</em>
-
-    <div class="actions">
-      <button id="calc-close-shift">Calculate Close Shift</button>
-    </div>
+    <div class="tab active" data-target="daily-deposit">Complete Daily Deposit</div>
   </div>
 
   <div id="daily-deposit" class="panel">
@@ -216,21 +156,7 @@
 
     const round = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
 
-    document.querySelectorAll('.tab').forEach(t=>{
-      t.onclick=()=>{
-        document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-        document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
-        t.classList.add('active');
-        const targetPanel = document.getElementById(t.dataset.target);
-        if (targetPanel) { // Guard against null targetPanel
-            targetPanel.classList.add('active');
-            setupEnterKeyNavigation(targetPanel);
-        } else {
-            console.error("Target panel not found for tab:", t.dataset.target);
-        }
-      };
-    });
-    console.log("Tab click handlers attached.");
+    // Only one tab remains, so no tab switching logic needed
 
     // --- Parse URL params for both old and new bookmarklets ---
     const params = new URLSearchParams(location.search);
@@ -277,60 +203,7 @@
     }
 
 
-    // --- Close Shift Tab Logic ---
-    const billsInput = document.getElementById('bills');
-    const billsDisplay = document.getElementById('bills-display');
-    const coinAdjustmentDisplay = document.getElementById('coin-adjustment');
-    const cashDropDisplay = document.getElementById('cash-drop');
-    const coinInputs = document.querySelectorAll('.coin');
 
-    // Ensure critical elements exist before defining functions that use them
-    if (!billsInput || !billsDisplay || !coinAdjustmentDisplay || !cashDropDisplay || !coinInputs.length) {
-        console.error("One or more critical elements for 'Close Shift' tab are missing!");
-        // return; // Optionally stop further script execution if elements are critical for basic operation
-    }
-    console.log("Close Shift tab elements obtained.");
-
-
-    document.getElementById('calc-close-shift').onclick = () => {
-      try { // Add try-catch within the handler
-        const billsValue = billsInput ? (+billsInput.value || 0) : 0; // Guard billsInput
-        if(billsDisplay) billsDisplay.textContent = billsValue.toFixed(2);
-
-        let totalCoinAdjustment = 0;
-        coinInputs.forEach(input => {
-          const par = +input.dataset.par;
-          const counted = +input.value || 0;
-          const valueCounted = input.id === 'dollarcoins' ? counted : counted;
-          const valuePar = input.id === 'dollarcoins' ? par : par;
-          let diff = 0;
-          if (input.id === 'dollarcoins') {
-              diff = counted * 1.00;
-          } else {
-              diff = valueCounted - valuePar;
-          }
-          totalCoinAdjustment += diff;
-          const actionCell = document.getElementById('act-' + input.id);
-          if (actionCell) { // Guard actionCell
-            if (Math.abs(diff) < 0.001) {
-              actionCell.textContent = 'OK';
-              actionCell.style.color = 'green';
-            } else if (diff > 0) {
-              actionCell.textContent = `Remove ${diff.toFixed(2)}`;
-              actionCell.style.color = 'red';
-            } else {
-              actionCell.textContent = `Add ${Math.abs(diff).toFixed(2)}`;
-              actionCell.style.color = 'blue';
-            }
-          }
-        });
-        if(coinAdjustmentDisplay) coinAdjustmentDisplay.textContent = totalCoinAdjustment.toFixed(2);
-        if(cashDropDisplay) cashDropDisplay.textContent = (billsValue + totalCoinAdjustment).toFixed(2);
-      } catch (e) {
-        console.error("Error in calc-close-shift handler:", e);
-      }
-    };
-    console.log("calc-close-shift click handler defined.");
 
     // --- Daily Deposit Tab Logic ---
     const ddTenderedDisplay = document.getElementById('dd-tendered');
