@@ -461,13 +461,12 @@
 
 
     // --- Enter Key Navigation ---
-    let focusableElements = [];
+    // --- Enter Key Navigation for Daily Deposit Panel Only ---
     function setupEnterKeyNavigation(panelElement) {
-        if (!panelElement) return; // Guard
-        focusableElements = Array.from(
+        if (!panelElement) return;
+        const focusableElements = Array.from(
             panelElement.querySelectorAll('input[type="text"], input[type="number"], textarea')
         ).filter(el => !el.readOnly && el.offsetParent !== null);
-
         focusableElements.forEach((el, index) => {
             el.addEventListener('keydown', (event) => {
                 if (event.key === 'Enter' || event.keyCode === 13) {
@@ -475,20 +474,13 @@
                     const nextElement = focusableElements[index + 1];
                     if (nextElement) {
                         nextElement.focus();
-                        if (nextElement.select) {
-                            nextElement.select();
-                        }
+                        if (nextElement.select) nextElement.select();
                     } else {
-                        if (panelElement.id === 'close-shift') {
-                            const calcButton = document.getElementById('calc-close-shift');
-                            if (calcButton) calcButton.focus();
-                        } else if (panelElement.id === 'daily-deposit') {
-                           const dailyDepositCalcButton = document.getElementById('calc-daily-deposit');
-                           if (el.id === 'notes' && dailyDepositCalcButton) {
-                                dailyDepositCalcButton.focus();
-                           } else if (focusableElements[index + 1] === undefined && dailyDepositCalcButton) {
-                                dailyDepositCalcButton.focus();
-                           }
+                        const dailyDepositCalcButton = document.getElementById('calc-daily-deposit');
+                        if (el.id === 'notes' && dailyDepositCalcButton) {
+                            dailyDepositCalcButton.focus();
+                        } else if (focusableElements[index + 1] === undefined && dailyDepositCalcButton) {
+                            dailyDepositCalcButton.focus();
                         }
                     }
                 }
@@ -497,29 +489,15 @@
     }
     console.log("setupEnterKeyNavigation function defined.");
 
-    const activePanel = document.querySelector('.panel.active');
-    if (activePanel) {
-        setupEnterKeyNavigation(activePanel);
-        console.log("Enter key navigation setup for active panel:", activePanel.id);
-    } else {
-        console.warn("No active panel found for initial Enter key navigation setup.");
+    // Only one panel remains, so set up navigation for it directly
+    const dailyDepositPanel = document.getElementById('daily-deposit');
+    if (dailyDepositPanel) {
+        setupEnterKeyNavigation(dailyDepositPanel);
+        console.log("Enter key navigation setup for daily deposit panel");
     }
 
-    // Defer initial calculations slightly
+    // Defer initial calculation for daily deposit only
     setTimeout(() => {
-        console.log("Attempting deferred initial clicks.");
-        try {
-            const calcCloseShiftButton = document.getElementById('calc-close-shift');
-            if (calcCloseShiftButton) {
-                calcCloseShiftButton.click();
-                console.log("Deferred click on calc-close-shift successful.");
-            } else {
-                console.error("calc-close-shift button not found for deferred click.");
-            }
-        } catch (e) {
-            console.error("Error during deferred initial calc-close-shift:", e);
-        }
-
         try {
             const calcDailyDepositButton = document.getElementById('calc-daily-deposit');
             if (calcDailyDepositButton) {
@@ -531,7 +509,7 @@
         } catch (e) {
             console.error("Error during deferred initial calc-daily-deposit:", e);
         }
-    }, 0); // setTimeout with 0ms delay
+    }, 0);
 
     console.log("DOMContentLoaded script finished.");
   });
