@@ -6,6 +6,7 @@
 <link rel="icon" href="favicon.ico" type="image/x-icon">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <style>
+  .shift-drop-row input { width: 100px; }
     body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
     h1, h2, h3 { margin: .5em 0; }
     .panel { border: 1px solid #ccc; padding: 20px; border-radius: 0 4px 4px 4px; margin-bottom: 20px; }
@@ -62,33 +63,7 @@
     <label for="dd-venue">Venue:</label>
     <input id="dd-venue" readonly>
 
-    <h3>Vendor Payouts / Bills</h3>
-    <div id="vendor-list">
-      <div class="vendor-row">
-          <input class="vendor-desc" type="text" placeholder="Description 1">
-          <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
-      </div>
-      <div class="vendor-row">
-          <input class="vendor-desc" type="text" placeholder="Description 2">
-          <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
-      </div>
-      <div class="vendor-row">
-          <input class="vendor-desc" type="text" placeholder="Description 3">
-          <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
-      </div>
-      <div class="vendor-row">
-          <input class="vendor-desc" type="text" placeholder="Description 4">
-          <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
-      </div>
-      <div class="vendor-row">
-          <input class="vendor-desc" type="text" placeholder="Description 5">
-          <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
-      </div>
-    </div>
-    <div class="summary-line">
-      <strong>Total Vendor Payouts ($):</strong>
-      <span id="total-vendor">0.00</span>
-    </div>
+
 
     <h3>Totals</h3>
     <div class="summary-line"><strong>Cash Total ($):</strong> <span id="dd-cash-total">0.00</span></div>
@@ -99,23 +74,73 @@
     <div class="summary-line"><strong>Net from POSaBIT Sales ($):</strong> <span id="dd-net-sales">0.00</span></div>
     <div class="summary-line"><strong>Net Deposit After Bills ($):</strong> <span id="dd-net-after-bills">0.00</span></div>
 
-    <h3>Cash &amp; Coins</h3>
-    <div>
-      <label for="closing-cash">Total Closing Cash ($):</label>
-      <input id="closing-cash" type="number" step="0.01" value="0">
-      <em>Remaining cash after setting aside Taxes &amp; Bills</em>
-    </div>
-    <h4>Shift Coin Adjustments</h4>
-    <div id="coin-adjust-list">
-      <div class="shift-coin-row"><label for="shift1-coin">Shift 1:</label> <input id="shift1-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
-      <div class="shift-coin-row"><label for="shift2-coin">Shift 2:</label> <input id="shift2-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
-      <div class="shift-coin-row"><label for="shift3-coin">Shift 3:</label> <input id="shift3-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
-      <div class="shift-coin-row"><label for="shift4-coin">Shift 4:</label> <input id="shift4-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
-      <div class="shift-coin-row"><label for="shift5-coin">Shift 5:</label> <input id="shift5-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
-      <div class="shift-coin-row"><label for="shift6-coin">Shift 6:</label> <input id="shift6-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
-    </div>
+  <h3>Cash</h3>
+
+      <h4>Shift Drops</h4>
+      <div id="shift-drop-list">
+        <div class="shift-drop-row">
+          <label>Shift 1:</label>
+          <input id="shift1-coin"  class="shift-coin"  type="number" step="0.01" value="0" placeholder="Coins ±">
+          <input id="shift1-cash"  class="shift-cash"  type="number" step="0.01" value="0" placeholder="Cash drop">
+        </div>
+        <div class="shift-drop-row">
+          <label>Shift 2:</label>
+          <input id="shift2-coin"  class="shift-coin"  type="number" step="0.01" value="0" placeholder="Coins ±">
+          <input id="shift2-cash"  class="shift-cash"  type="number" step="0.01" value="0" placeholder="Cash drop">
+        </div>
+        <div class="shift-drop-row">
+          <label>Shift 3:</label>
+          <input id="shift3-coin"  class="shift-coin"  type="number" step="0.01" value="0" placeholder="Coins ±">
+          <input id="shift3-cash"  class="shift-cash"  type="number" step="0.01" value="0" placeholder="Cash drop">
+        </div>
+        <div class="shift-drop-row">
+          <label>Shift 4:</label>
+          <input id="shift4-coin"  class="shift-coin"  type="number" step="0.01" value="0" placeholder="Coins ±">
+          <input id="shift4-cash"  class="shift-cash"  type="number" step="0.01" value="0" placeholder="Cash drop">
+        </div>
+        <div class="shift-drop-row">
+          <label>Shift 5:</label>
+          <input id="shift5-coin"  class="shift-coin"  type="number" step="0.01" value="0" placeholder="Coins ±">
+          <input id="shift5-cash"  class="shift-cash"  type="number" step="0.01" value="0" placeholder="Cash drop">
+        </div>
+        <div class="shift-drop-row">
+          <label>Shift 6:</label>
+          <input id="shift6-coin"  class="shift-coin"  type="number" step="0.01" value="0" placeholder="Coins ±">
+          <input id="shift6-cash"  class="shift-cash"  type="number" step="0.01" value="0" placeholder="Cash drop">
+        </div>
+      </div>
      <div class="summary-line"><strong>Total Closing Coin Adjustments ($):</strong> <span id="total-coin-adjust-shifts">0.00</span></div>
-     <div class="summary-line"><strong>Total Cash &amp; Coins ($):</strong> <span id="total-cash-coins">0.00</span></div>
+  <div class="summary-line"><strong>Total Closing Cash ($):</strong> <span id="total-cash-from-shifts">0.00</span></div>
+
+  <div class="summary-line"><strong>Net Total Cash ($):</strong> <span id="total-cash-coins">0.00</span></div>
+
+  <h3>Vendor Payouts / Bills</h3>
+  <div id="vendor-list">
+    <div class="vendor-row">
+        <input class="vendor-desc" type="text" placeholder="Description 1">
+        <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
+    </div>
+    <div class="vendor-row">
+        <input class="vendor-desc" type="text" placeholder="Description 2">
+        <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
+    </div>
+    <div class="vendor-row">
+        <input class="vendor-desc" type="text" placeholder="Description 3">
+        <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
+    </div>
+    <div class="vendor-row">
+        <input class="vendor-desc" type="text" placeholder="Description 4">
+        <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
+    </div>
+    <div class="vendor-row">
+        <input class="vendor-desc" type="text" placeholder="Description 5">
+        <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
+    </div>
+  </div>
+  <div class="summary-line">
+    <strong>Total Vendor Payouts ($):</strong>
+    <span id="total-vendor">0.00</span>
+  </div>
 
     <h3>Results</h3>
     <div class="results-line"><strong>Actual Deposit ($):</strong> <span id="res-actual">0.00</span></div>
@@ -244,37 +269,46 @@
 
     document.getElementById('calc-daily-deposit').onclick = () => {
       try {
-        let totalVendorPayouts = 0;
-        document.querySelectorAll('.vendor-amount').forEach(input => {
-          totalVendorPayouts += +input.value || 0;
-        });
-        if(totalVendorDisplay) totalVendorDisplay.textContent = totalVendorPayouts.toFixed(2);
-
         // Use new netSales and netTendered
         if(ddNetSalesDisplay) ddNetSalesDisplay.textContent = netSales.toFixed(2);
         if(ddTenderedDisplay) ddTenderedDisplay.textContent = netTendered.toFixed(2);
 
-        const netDepositAfterBills = round(netSales - totalVendorPayouts);
-        if(ddNetAfterBillsDisplay) ddNetAfterBillsDisplay.textContent = netDepositAfterBills.toFixed(2);
-
-        const totalClosingCash = closingCashInput ? (+closingCashInput.value || 0) : 0;
+        // --- Sum shift coin adjustments ---
         let totalShiftCoinAdjustments = 0;
         document.querySelectorAll('.shift-coin').forEach(input => {
           totalShiftCoinAdjustments += +input.value || 0;
         });
         if(totalCoinAdjustShiftsDisplay) totalCoinAdjustShiftsDisplay.textContent = totalShiftCoinAdjustments.toFixed(2);
 
-        const totalCashAndCoins = round(totalClosingCash + totalShiftCoinAdjustments);
-        if(totalCashCoinsDisplay) totalCashCoinsDisplay.textContent = totalCashAndCoins.toFixed(2);
+        // --- NEW: Sum shift cash drops ---
+        let totalShiftCashDrops = 0;
+        document.querySelectorAll('.shift-cash').forEach(input => {
+          totalShiftCashDrops += +input.value || 0;
+        });
+        document.getElementById('total-cash-from-shifts').textContent =
+            totalShiftCashDrops.toFixed(2);
 
-        // Net Debit Deposit display removed
+        // --- Net total cash is sum of shift cash drops and coin adjustments ---
+        const netTotalCash = round(totalShiftCashDrops + totalShiftCoinAdjustments);
+        if(totalCashCoinsDisplay) totalCashCoinsDisplay.textContent = netTotalCash.toFixed(2);
 
-        // --- Actual Deposit includes Net Debit Deposit ---
-        const actualDeposit = totalCashAndCoins + netDebitDeposit;
-        if(resActualDisplay) resActualDisplay.textContent = actualDeposit.toFixed(2);
+        // --- Now compute totalVendorPayouts ---
+        let totalVendorPayouts = 0;
+        document.querySelectorAll('.vendor-amount').forEach(input => {
+          totalVendorPayouts += +input.value || 0;
+        });
+        if(totalVendorDisplay) totalVendorDisplay.textContent = totalVendorPayouts.toFixed(2);
+
+        const netDepositAfterBills = round(netSales - totalVendorPayouts);
+        if(ddNetAfterBillsDisplay) ddNetAfterBillsDisplay.textContent = netDepositAfterBills.toFixed(2);
+
+        // --- Actual Deposit is now totalCashDrop ---
+        const totalCashDrop = round(netTotalCash - totalVendorPayouts);
+        if(resActualDisplay) resActualDisplay.textContent = totalCashDrop.toFixed(2);
         if(resNetDepositDisplay) resNetDepositDisplay.textContent = netDepositAfterBills.toFixed(2);
 
-        const difference = round(actualDeposit - netDepositAfterBills);
+        // --- Difference is totalCashDrop - netDepositAfterBills ---
+        const difference = round(totalCashDrop - netDepositAfterBills);
         if(resDifferenceDisplay) {
             resDifferenceDisplay.textContent = difference.toFixed(2);
             if (Math.abs(difference) < 0.01) {
@@ -338,13 +372,13 @@
           `Total Payouts:       $${totalVendorPayouts.toFixed(2)}`,
           `Net Dep After Bills: $${netDepositAfterBills.toFixed(2)}`,
           `---------------------------------`,
-          `Total Closing Cash:  $${totalClosingCash.toFixed(2)}`,
           `Shift Coin Adjustments:`,
           ...(shiftAdjustRows.length > 0 ? shiftAdjustRows : ['  (None)']),
           `Total Adjustments:   $${totalShiftCoinAdjustments.toFixed(2)}`,
-          `Total Cash & Coins:  $${totalCashAndCoins.toFixed(2)}`,
+          `Net Total Cash:      $${netTotalCash.toFixed(2)}`,
+          `Total Cash Drop:     $${totalCashDrop.toFixed(2)}`,
           `---------------------------------`,
-          `Actual Deposit:      $${actualDeposit.toFixed(2)}`,
+          `Actual Deposit:      $${totalCashDrop.toFixed(2)}`,
           `Net Deposit Req:     $${netDepositAfterBills.toFixed(2)}`,
           `Difference:          $${difference.toFixed(2)} ${Math.abs(difference) < 0.01 ? '(OK)' : (difference > 0 ? '(Over)' : '(Short)')}`,
           `---------------------------------`,
@@ -415,24 +449,26 @@
         data.push(['Net Deposit After Bills', getNumFromTxt('dd-net-after-bills')]);
         data.push([]);
         headerRows.push(data.length);
-        data.push(['----- Cash & Coins -----']);
-        data.push(['Total Closing Cash', getNumFromVal('closing-cash')]);
-        data.push([]);
-        headerRows.push(data.length);
-        data.push(['Shift Coin Adjustments']);
-        let adjCount = 0;
-        document.querySelectorAll('.shift-coin').forEach((i, idx) => {
-            const adjValue = +i.value || 0;
-            if (adjValue !== 0) {
-                data.push([`  Shift ${idx + 1}`, adjValue]);
-                adjCount++;
-            }
-        });
-        if (adjCount === 0) { data.push(['  (None)']); }
-        data.push([]);
-        data.push(['Total Closing Coin Adjustments', getNumFromTxt('total-coin-adjust-shifts')]);
-        data.push(['Total Cash & Coins', getNumFromTxt('total-cash-coins')]);
-        data.push([]);
+    data.push(['----- Cash & Coins -----']);
+    data.push(['Net Total Cash', getNumFromTxt('total-cash-coins')]);
+    data.push(['Total Cash Drop', getNumFromTxt('res-actual')]);
+    data.push([]);
+    headerRows.push(data.length);
+    data.push(['Shift Coin Adjustments']);
+    let adjCount = 0;
+    document.querySelectorAll('.shift-coin').forEach((i, idx) => {
+      const adjValue = +i.value || 0;
+      if (adjValue !== 0) {
+        data.push([`  Shift ${idx + 1}`, adjValue]);
+        adjCount++;
+      }
+    });
+    if (adjCount === 0) { data.push(['  (None)']); }
+    data.push([]);
+    data.push(['Total Closing Coin Adjustments', getNumFromTxt('total-coin-adjust-shifts')]);
+    data.push(['Net Total Cash', getNumFromTxt('total-cash-coins')]);
+    data.push(['Total Cash Drop', getNumFromTxt('res-actual')]);
+    data.push([]);
         headerRows.push(data.length);
         data.push(['----- Results -----']);
         data.push(['Actual Deposit', getNumFromTxt('res-actual')]);
