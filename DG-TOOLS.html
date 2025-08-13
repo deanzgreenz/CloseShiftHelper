@@ -3,13 +3,14 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DG Tools — Daily Deposit (Simple v3.3, Excel Export)</title>
+<title>DG Tools — Daily Deposit (v4.1, Final Math Fix)</title>
 <style>
   :root{
     --bg:#0f1219; --card:#171b26; --muted:#21293a; --ink:#e9edf3; --sub:#a6b3ca;
     --ok:#12b981; --bad:#ef4444;
   }
   *{box-sizing:border-box}
+  html,body{height:100%}
   body{margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
        background:var(--bg); color:var(--ink); line-height:1.45}
   .wrap{max-width:980px;margin:0 auto;padding:16px}
@@ -19,7 +20,7 @@
   .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
   .col{flex:1 1 200px}
   label{display:block; font-size:12px; color:#a6b3ca; margin-bottom:6px}
-  input, select{width:100%; padding:10px 12px; background:#0c111a; color:#e9edf3;
+  input, select, textarea{width:100%; padding:10px 12px; background:#0c111a; color:#e9edf3;
     border:1px solid #2a3347; border-radius:10px;}
   table{width:100%; border-collapse:collapse; font-size:14px}
   th,td{padding:8px 10px; border-bottom:1px solid #242c3f}
@@ -34,6 +35,7 @@
           background:rgba(15,18,25,.9); border-bottom:1px solid #1b2333}
   .mono{font-family: ui-monospace, Menlo, Consolas, monospace}
   .help{font-size:11px; color:#93a4c4}
+  .muted{color:#93a4c4}
 
 @media print {
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -58,12 +60,12 @@
     <div class="card">
       <div class="help" id="sumActualLabel">Actual Deposit</div>
       <div id="sumActual" class="mono" style="font-size:18px;font-weight:800">$0.00</div>
-      <div class="help" id="sumActualFormula">= Σ Drop + Σ Coin ±</div>
+      <div class="help" id="sumActualFormula">= (Σ Drop + Σ Coin ±) - Payouts</div>
     </div>
     <div class="card">
       <div class="help">POS Net After Bills</div>
       <div id="sumExpected" class="mono" style="font-size:18px;font-weight:800">$0.00</div>
-      <div class="help">= (Cash + Debit − Cashback − Taxes) − Σ Payouts</div>
+      <div class="help" id="expectedFormula">= (Cash + Debit − Cashback − Taxes) − Payouts</div>
     </div>
     <div class="card">
       <div class="help">Difference</div>
@@ -100,8 +102,9 @@
       </div>
       <div class="row">
         <button id="btnPaste" class="btn sub">Paste from Clipboard</button>
-        <div class="help">Tip: On the POSaBIT Venue Dashboard: Ctrl+A, Ctrl+C, then click this.</div>
+        <div class="help">Tip: On the POSaBIT Venue Dashboard: Ctrl+A, Ctrl+C, then click this. If your browser blocks clipboard, just press Ctrl+V anywhere on this page.</div>
       </div>
+      <textarea id="pasteCatcher" aria-hidden="true" tabindex="-1" style="position:absolute;left:-9999px;top:-9999px;height:1px;width:1px"></textarea>
     </section>
 
     <section class="card">
@@ -154,13 +157,12 @@
         Enter shift drops <b>BEFORE</b> taxes &amp; payouts are pulled
       </label>
     </div>
-    <div class="help" id="grossNote">In this mode, the tool auto‑subtracts Taxes and Vendor Payouts from the deposit.</div>
-
+    <div class="help" id="grossNote">In this mode, the tool auto‑subtracts Vendor Payouts from the deposit.</div>
     <table>
       <tbody>
-        <tr><td id="actualLabel">Actual Deposit (Σ Drop + Σ Coin ±)</td><td class="right mono" id="actual">$0.00</td></tr>
+        <tr><td id="actualLabel">Actual Deposit (after payouts)</td><td class="right mono" id="actual">$0.00</td></tr>
         <tr id="grossRow" style="display:none;"><td>Gross Closing Cash (Σ Drop + Σ Coin ±)</td><td class="right mono" id="grossCash">$0.00</td></tr>
-        <tr><td>POS Net After Bills ((Cash + Debit − Cashback − Taxes) − Σ Payouts)</td><td class="right mono" id="expected">$0.00</td></tr>
+        <tr><td id="expectedLabel">POS Net After Bills ((Cash + Debit - Cashback - Taxes) - Payouts)</td><td class="right mono" id="expected">$0.00</td></tr>
         <tr><td><b>Difference (Actual − POS Net)</b></td><td class="right mono" id="diff">$0.00</td></tr>
       </tbody>
     </table>
@@ -208,19 +210,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const grossMode = document.querySelector('#enterGross')?.checked;
     const gross = r2(drop + coin);
-    const actual = grossMode ? r2(gross - tax - payouts) : gross;
+
+    // --- CLAUDE'S LOGIC FIX ---
+    // In gross mode, the "Actual Deposit" is the physically counted cash minus physical cash payouts.
+    // Taxes are not physically pulled from the cash drawer, so they are not subtracted here.
+    const actual = grossMode ? r2(gross - payouts) : gross;
+    
+    // The "Expected" amount from the POS is based on tendered totals minus all deductions.
     const expected = r2((cash + debit - cashback - tax) - payouts);
+    // --- END FIX ---
+
     const diff = r2(actual - expected);
 
     // UI labels for mode
-    const lbl = document.querySelector('#actualLabel');
-    const sumLbl = document.querySelector('#sumActualLabel');
-    const sumForm = document.querySelector('#sumActualFormula');
-    const grossRow = document.querySelector('#grossRow');
-    const grossCash = document.querySelector('#grossCash');
-    if (lbl) lbl.textContent = grossMode ? 'Actual Deposit (after taxes & payouts)' : 'Actual Deposit (Σ Drop + Σ Coin ±)';
-    if (sumLbl) sumLbl.textContent = grossMode ? 'Actual Deposit (after taxes & payouts)' : 'Actual Deposit';
-    if (sumForm) sumForm.textContent = grossMode ? '= (Σ Drop + Σ Coin ±) − Taxes − Σ Payouts' : '= Σ Drop + Σ Coin ±';
+    const actualLabel = $('#actualLabel');
+    const expectedLabel = $('#expectedLabel');
+    const sumActualFormula = $('#sumActualFormula');
+    const expectedFormula = $('#expectedFormula');
+    const grossRow = $('#grossRow');
+    const grossCash = $('#grossCash');
+    
+    if (grossMode) {
+        if(actualLabel) actualLabel.textContent = 'Actual Deposit (after payouts)';
+        if(sumActualFormula) sumActualFormula.textContent = '= (Σ Drop + Σ Coin ±) - Payouts';
+    } else {
+        if(actualLabel) actualLabel.textContent = 'Actual Deposit (Σ Drop + Σ Coin ±)';
+        if(sumActualFormula) sumActualFormula.textContent = '= Σ Drop + Σ Coin ±';
+    }
+    if(expectedLabel) expectedLabel.textContent = 'POS Net After Bills ((Cash + Debit - Cashback - Taxes) - Payouts)';
+    if(expectedFormula) expectedFormula.textContent = '= (Cash + Debit − Cashback − Taxes) − Payouts';
+
     if (grossRow) grossRow.style.display = grossMode ? '' : 'none';
     if (grossCash) grossCash.textContent = fmt(gross);
 
@@ -236,8 +255,8 @@ document.addEventListener('DOMContentLoaded', () => {
     $('#sumExpected').textContent = fmt(expected);
     $('#sumDiff').textContent = fmt(diff);
     const status = $('#sumStatus'); const abs = Math.abs(diff);
-    status.textContent = abs < 0.01 ? 'OK' : (diff>0 ? 'Over' : 'Short');
-    status.className = 'pill ' + (abs<0.01 ? 'ok' : 'bad');
+    status.textContent = abs < 1.00 ? 'OK' : (diff>0 ? 'Over' : 'Short');
+    status.className = 'pill ' + (abs<1.00 ? 'ok' : 'bad');
   }
 
   function addPayoutRow(desc='', amount=''){
@@ -272,7 +291,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function renumber(){ Array.from(sbody?.children||[]).forEach((tr,i)=> tr.firstElementChild.textContent = (i+1)); }
 
   // Seed initial rows
-  for(let i=0;i<3;i++) addShiftRow();
+  for(let i=0;i<4;i++) addShiftRow();
 
   // Wire buttons
   $('#addPayout')?.addEventListener('click', ()=> addPayoutRow());
@@ -290,43 +309,98 @@ document.addEventListener('DOMContentLoaded', () => {
   // Toggle recalc for gross mode
   document.querySelector('#enterGross')?.addEventListener('change', recalc);
 
-  // Clipboard paste
-  $('#btnPaste')?.addEventListener('click', async ()=>{
+  function parseDashboard(text) {
+    if (!text) return false;
+    
+    text = text.replace(/\u00a0/g, ' ').replace(/\r/g, '');
+
+    const asDollars = s => {
+        if (!s) return 0;
+        const match = String(s).match(/-?\$?[\d,]+\.\d{2}/);
+        if (!match) return 0;
+        const cleaned = match[0].replace(/[^0-9.\-]/g, '');
+        const num = parseFloat(cleaned);
+        return isFinite(num) ? num : 0;
+    };
+
+    const storeMatch = text.match(/Deanz Greenz\s*-\s*(Sandy|Foster|Division)/i);
+    if (storeMatch) {
+        const storeName = storeMatch[1];
+        if (document.querySelector('#store')) {
+            document.querySelector('#store').value = storeName;
+            applyStoreDefaults();
+        }
+    }
+
+    let cashTotal = 0, debitTotal = 0, cashbackTotal = 0, taxTotal = 0;
+
+    const paymentMethodSectionMatch = text.match(/Payment Method([\s\S]*?)(?:TaxApplicable|$)/i);
+    if (paymentMethodSectionMatch) {
+        const paymentSection = paymentMethodSectionMatch[1];
+        const segments = paymentSection.split(/(?=Cash\b|Debit Card\b|Debit\b|Cashless ATM\b|Cashback\b|Total\b)/gi);
+        
+        segments.forEach(segment => {
+            const trimmedSegment = segment.trim();
+            if (!trimmedSegment) return;
+            const amounts = trimmedSegment.match(/-?\$[\d,]+\.\d{2}/g);
+            if (!amounts || amounts.length === 0) return;
+            const lastAmount = amounts[amounts.length - 1];
+            
+            if (/^cash(?!back)/i.test(trimmedSegment)) {
+                cashTotal = asDollars(lastAmount);
+            } else if (/^cashback/i.test(trimmedSegment)) {
+                cashbackTotal = asDollars(lastAmount);
+            } else if (/^debit/i.test(trimmedSegment)) {
+                debitTotal = asDollars(lastAmount);
+            }
+        });
+    }
+
+    const taxLineMatch = text.match(/Oregon State Marijuana Tax - 20%[^\$]*\$[\d,.-]+[^\$]*(\$[\d,.-]+)/i);
+    if (taxLineMatch) {
+        taxTotal = asDollars(taxLineMatch[1]);
+    }
+
+    const updateField = (selector, value) => {
+        const field = document.querySelector(selector);
+        if (field) {
+            if (value === 0 && selector !== '#cashbackTotal') {
+                 field.value = '';
+            } else {
+                 field.value = value.toFixed(2);
+            }
+        }
+    };
+
+    updateField('#cashTotal', cashTotal);
+    updateField('#debitTotal', debitTotal);
+    updateField('#cashbackTotal', cashbackTotal);
+    updateField('#taxTotal', taxTotal);
+
+    recalc();
+    return true;
+  }
+
+  $('#btnPaste')?.addEventListener('click', async (e)=>{
+    e.preventDefault();
     try{
-      const raw = await navigator.clipboard.readText();
-      if(!raw){ alert('Clipboard empty.'); return; }
-      const text = raw.replace(/\u00a0/g,' ');
+      const txt = await navigator.clipboard.readText();
+      if(txt && parseDashboard(txt)) return;
+    }catch(err){ 
+      console.warn("Clipboard API failed, falling back to paste event.", err);
+    }
+    const cat = $('#pasteCatcher');
+    cat.value=''; cat.style.left='0'; cat.style.top='0'; cat.focus();
+    alert('Clipboard blocked or failed. Please press Ctrl+V (or ⌘V) now.');
+  });
 
-      // Store detection if empty
-      const low = text.toLowerCase();
-      const storeSel = $('#store');
-      if(storeSel && !storeSel.value){
-        if(low.includes('sandy')) storeSel.value='Sandy';
-        else if(low.includes('foster')) storeSel.value='Foster';
-        else if(low.includes('division')) storeSel.value='Division';
-        applyStoreDefaults();
-      }
-
-      const pull = (label)=>{
-        const re = new RegExp(label+`\\s*[:\\-]?\\s*([$\\-0-9,\\.]+)`, 'i');
-        const m = text.match(re);
-        return m? m[1] : null;
-      };
-
-      const cash = pull('cash\\b');
-      const cashback = pull('cashback\\b');
-      const debit = pull('debit(?:\\s*card)?\\b');
-      const taxRow = text.match(/oregon\s*state\s*marijuana\s*tax[^$0-9]*([$0-9,\.]+)/i);
-
-      if(cash) $('#cashTotal').value = cash;
-      if(debit) $('#debitTotal').value = debit;
-      if(cashback) $('#cashbackTotal').value = cashback;
-      if(taxRow) $('#taxTotal').value = taxRow[1];
-
-      recalc();
-    }catch(e){
-      console.error(e);
-      alert('Clipboard read failed (browser permissions).');
+  document.addEventListener('paste', (e)=>{
+    const data = (e.clipboardData || window.clipboardData)?.getData('text');
+    if(data && data.length > 50){ 
+      e.preventDefault(); 
+      parseDashboard(data); 
+      const cat = $('#pasteCatcher');
+      cat.blur(); cat.style.left='-9999px'; cat.style.top='-9999px';
     }
   });
 
@@ -361,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function rowsToCSV(rows){
-    return rows.map(r=> r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\\r\\n');
+    return rows.map(r=> r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
   }
 
   $('#exportBtn')?.addEventListener('click', ()=>{
@@ -397,11 +471,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const payouts = [['Description','Amount'], ...D.payoutRows, ['Total Payouts', document.querySelector('#payoutSum')?.textContent||'$0.00']];
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(payouts), 'Payouts');
 
-      const fname = `DG-Deposit_${D.store}_${D.dt||'date'}.xlsx`.replace(/\\s+/g,'-');
+      const fname = `DG-Deposit_${D.store}_${D.dt||'date'}.xlsx`.replace(/\s+/g,'-');
       XLSX.writeFile(wb, fname);
     } else {
       const rows = [
-        ['DG Tools — Daily Deposit (Simple v3.3)'],
+        ['DG Tools — Daily Deposit (v4.1)'],
         ['Store', D.store],
         ['Date', D.dt],
         ['Entry Mode', (document.querySelector('#enterGross')?.checked ? 'Gross (Pre-Pull)' : 'Net (Post-Pull)')],
@@ -431,7 +505,7 @@ document.addEventListener('DOMContentLoaded', () => {
       ];
       const csv = rowsToCSV(rows);
       const blob = new Blob([csv], {type:'text/csv'});
-      const name = `DG-Deposit_${D.store}_${D.dt||'date'}.csv`.replace(/\\s+/g,'-');
+      const name = `DG-Deposit_${D.store}_${D.dt||'date'}.csv`.replace(/\s+/g,'-');
       const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); URL.revokeObjectURL(a.href);
     }
   });
