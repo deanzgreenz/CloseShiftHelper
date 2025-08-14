@@ -492,6 +492,27 @@ document.addEventListener('DOMContentLoaded', () => {
   const payoutsBody = $('#payoutsTable tbody');
   const shiftsBody = $('#shiftTable tbody');
 
+  // --- BOOKMARKLET/URL PARAMETER HANDLING ---
+  const p = new URLSearchParams(location.search);
+  const setFromParam = (selector, key) => {
+      const v = p.get(key);
+      if (v != null) {
+          const el = $(selector);
+          if (el) el.value = v;
+      }
+  };
+  
+  const storeParam = p.get('store');
+  if (storeParam) {
+      const storeSelect = $('#store');
+      if (storeSelect) storeSelect.value = storeParam;
+  }
+  setFromParam('#cashTotal', 'cashTotal');
+  setFromParam('#debitTotal', 'debitTotal');
+  setFromParam('#cashbackTotal', 'cashbackTotal');
+  setFromParam('#taxTotal', 'tax');
+
+
   // Main recalculation function
   function recalc(){
     // 1. Get all input values
@@ -626,13 +647,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const taxLineMatch = text.match(/Oregon State Marijuana Tax - 20%[^\$]*\$[\d,.-]+[^\$]*(\$[\d,.-]+)/i);
     if (taxLineMatch) taxTotal = asDollars(taxLineMatch[1]);
 
-    const updateField = (selector, value) => {
-      const field = $(selector);
-      if (field) field.value = Math.abs(value).toFixed(2);
+    const updateField = (selector, value, makeAbs = false) => {
+        const field = $(selector);
+        if (field) {
+            let finalValue = makeAbs ? Math.abs(value) : value;
+            field.value = finalValue.toFixed(2);
+        }
     };
     updateField('#cashTotal', cashTotal);
     updateField('#debitTotal', debitTotal);
-    updateField('#cashbackTotal', cashbackTotal);
+    updateField('#cashbackTotal', cashbackTotal, true);
     updateField('#taxTotal', taxTotal);
     recalc();
     return true;
