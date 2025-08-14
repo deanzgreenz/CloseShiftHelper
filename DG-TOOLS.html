@@ -272,6 +272,51 @@
     height: 1px;
     opacity: 0;
   }
+
+  @media print {
+    :root {
+      --bg: #ffffff;
+      --card: #ffffff;
+      --border: #dddddd;
+      --ink: #000000;
+      --sub: #555555;
+      --muted: #777777;
+    }
+    body {
+      background: white;
+      color: black;
+      font-size: 12px;
+    }
+    .container {
+      padding: 0;
+      max-width: 100%;
+    }
+    .sticky-header, button, .help-text, .danger, #btnPaste {
+      display: none !important;
+    }
+    .card {
+      border: 1px solid #ccc;
+      page-break-inside: avoid;
+      box-shadow: none;
+    }
+    h1, h2, h3, h4 {
+      color: #000;
+    }
+    input, select {
+      border: 1px solid #ccc !important;
+      background: #f9f9f9 !important;
+      color: #000 !important;
+    }
+    .summary-box {
+      border: 1px solid #ccc;
+    }
+    .summary-row {
+      border-bottom: 1px solid #ccc;
+    }
+    th, td {
+      border-bottom: 1px solid #ccc;
+    }
+  }
 </style>
 </head>
 <body>
@@ -691,74 +736,80 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Export Functionality ---
   $('#exportBtn').addEventListener('click', () => {
     if (typeof XLSX === 'undefined') {
-      console.error("XLSX library is not loaded.");
+      alert("XLSX library is not loaded. Cannot export to .xlsx");
       return;
     }
 
     const store = $('#store').value || 'Unknown';
     const dt = $('#bizDate').value || '';
     
-    const data = {
-      store, 
-      date: dt,
-      cashTotal: $('#cashTotal').value||'0',
-      debitTotal: $('#debitTotal').value||'0',
-      cashbackTotal: $('#cashbackTotal').value||'0',
-      taxTotal: $('#taxTotal').value||'0',
-      
-      bills: Array.from(billsBody.querySelectorAll('tr')).map(tr=>[
-        tr.querySelector('input.pdesc')?.value||'',
-        tr.querySelector('input.pamt')?.value||'0',
-      ]),
-      payouts: Array.from(payoutsBody.querySelectorAll('tr')).map(tr=>[
-        tr.querySelector('input.pdesc')?.value||'',
-        tr.querySelector('input.pamt')?.value||'0',
-      ]),
-      shifts: Array.from(shiftsBody.querySelectorAll('tr')).map((tr,i)=>[
-        i+1,
-        tr.children[1].querySelector('input')?.value||'',
-        tr.children[2].querySelector('input')?.value||'0',
-        tr.children[3].querySelector('input')?.value||'0',
-      ]),
+    const data = [
+        ['----- Daily Deposit Summary -----', ''],
+        ['Store', store],
+        ['Date', dt],
+        ['', ''],
+        ['----- POS Totals -----', ''],
+        ['Cash Total (Tendered)', num($('#cashTotal').value)],
+        ['Debit Total (Tendered)', num($('#debitTotal').value)],
+        ['Cashback Given', num($('#cashbackTotal').value)],
+        ['Taxes (Collected)', num($('#taxTotal').value)],
+        ['', ''],
+        ['----- Bills (Set Aside) -----', '']
+    ];
+    
+    Array.from(billsBody.querySelectorAll('tr')).forEach(tr => {
+        const desc = tr.querySelector('input.pdesc')?.value || '(No Description)';
+        const amt = num(tr.querySelector('input.pamt')?.value);
+        data.push([`  ${desc}`, amt]);
+    });
+    data.push(['Total Bills', num($('#billsSum').textContent)]);
+    data.push(['', '']);
+    
+    data.push(['----- Vendor Payouts (From Register) -----', '']);
+    Array.from(payoutsBody.querySelectorAll('tr')).forEach(tr => {
+        const desc = tr.querySelector('input.pdesc')?.value || '(No Description)';
+        const amt = num(tr.querySelector('input.pamt')?.value);
+        data.push([`  ${desc}`, amt]);
+    });
+    data.push(['Total Payouts', num($('#payoutsSum').textContent)]);
+    data.push(['', '']);
 
-      grossCash: $('#grossCash').textContent||'$0.00',
-      expectedGrossCash: $('#expectedGrossCash').textContent||'$0.00',
-      actualDeposit: $('#actual').textContent||'$0.00',
-      expectedDeposit: $('#expected').textContent||'$0.00',
-      diff: $('#diff').textContent||'$0.00',
-    };
+    data.push(['----- Shifts -----', '']);
+    Array.from(shiftsBody.querySelectorAll('tr')).forEach((tr, i) => {
+        const notes = tr.querySelector('td:nth-child(2) input')?.value || '';
+        const drop = num(tr.querySelector('td:nth-child(3) input')?.value);
+        const coin = num(tr.querySelector('td:nth-child(4) input')?.value);
+        data.push([`Shift ${i+1}: ${notes}`, `Drop: ${fmt(drop)}`, `Coin: ${fmt(coin)}`]);
+    });
+    data.push(['Total Physical Cash', num($('#grossCash').textContent)]);
+    data.push(['', '']);
+
+    data.push(['----- Results -----', '']);
+    data.push(['Physical Cash Counted (Gross)', num($('#grossCash').textContent)]);
+    data.push(['Expected Cash in Till (Gross)', num($('#expectedGrossCash').textContent)]);
+    data.push(['Actual Final Deposit (after bills)', num($('#actual').textContent)]);
+    data.push(['Expected Final Deposit (after bills)', num($('#expected').textContent)]);
+    data.push(['Difference (Over/Short)', num($('#diff').textContent)]);
 
     const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(data);
     
-    const summary = [
-      ['Store', data.store],
-      ['Date', data.date],
-      [],
-      ['POS Totals'],
-      ['Cash Total', num(data.cashTotal)],
-      ['Debit Total', num(data.debitTotal)],
-      ['Cashback Given', num(data.cashbackTotal)],
-      ['Taxes', num(data.taxTotal)],
-      [],
-      ['Results Summary'],
-      ['Physical Cash Counted', data.grossCash],
-      ['Expected Cash in Till', data.expectedGrossCash],
-      ['Actual Final Deposit', data.actualDeposit],
-      ['Expected Final Deposit', data.expectedDeposit],
-      ['Difference (Over/Short)', data.diff],
-    ];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summary), 'Summary');
+    // Formatting
+    ws['!cols'] = [{ wch: 35 }, { wch: 15 }, { wch: 15 }];
+    Object.keys(ws).forEach(cellRef => {
+        if (cellRef[0] === '!') return;
+        const cell = ws[cellRef];
+        const col = XLSX.utils.decode_cell(cellRef).c;
+        if (col > 0 && cell.t === 'n') {
+            cell.z = '$#,##0.00';
+        }
+        if(cell.v.toString().startsWith('-----')){
+            cell.s = { font: { bold: true } };
+        }
+    });
 
-    const shifts = [['#','Employee / Notes','Shift Cash Drop (bills)','Shift Coin ±'], ...data.shifts];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(shifts), 'Shifts');
-
-    const bills = [['Description','Amount'], ...data.bills];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(bills), 'Bills (Set Aside)');
-    
-    const payouts = [['Description','Amount'], ...data.payouts];
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(payouts), 'Payouts (From Register)');
-
-    const fname = `DG-Deposit_${data.store}_${data.date||'date'}.xlsx`.replace(/\s+/g,'-');
+    XLSX.utils.book_append_sheet(wb, ws, 'Daily Deposit');
+    const fname = `DG-Deposit_${store}_${dt||'date'}.xlsx`.replace(/\s+/g,'-');
     XLSX.writeFile(wb, fname);
   });
 
