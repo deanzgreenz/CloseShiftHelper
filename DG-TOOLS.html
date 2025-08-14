@@ -472,9 +472,30 @@
       <button class="danger small" id="clearShifts">Clear</button>
     </div>
   </div>
+  
+  <div class="card">
+    <h2>5) Notes & Sign-off</h2>
+     <div class="row">
+      <div class="col">
+        <label>Prepared By</label>
+        <input type="text" id="empName" placeholder="Your Name" />
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <label>Change Bag Amount</label>
+        <input type="number" id="changeBag" step="0.01" placeholder="0.00" />
+      </div>
+      <div class="col">
+        <label>Notes</label>
+        <input type="text" id="generalNotes" placeholder="e.g., issues, discrepancies" />
+      </div>
+    </div>
+    <div class="help-text">For record-keeping only. Not included in any calculations.</div>
+  </div>
 
   <div class="card">
-    <h2>5) Results</h2>
+    <h2>6) Results</h2>
     <div class="summary-box">
       <div class="summary-row">
         <span>Physical Cash Counted (Gross)</span>
@@ -638,6 +659,43 @@ document.addEventListener('DOMContentLoaded', () => {
       <td class="text-right"><input type="number" step="0.01" placeholder="0.00" value="${drop}"/></td>
       <td class="text-right"><input type="number" step="0.01" placeholder="0.00" value="${coin}"/></td>
       <td class="text-center"><button class="danger small" type="button">X</button></td>`;
+    
+    const noteInput = tr.querySelector('td:nth-child(2) input');
+    const dropInput = tr.querySelector('td:nth-child(3) input');
+    const coinInput = tr.querySelector('td:nth-child(4) input');
+
+    noteInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            dropInput.focus();
+            dropInput.select();
+        }
+    });
+
+    dropInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            coinInput.focus();
+            coinInput.select();
+        }
+    });
+
+    coinInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const nextRow = tr.nextElementSibling;
+            if (nextRow) {
+                const nextNoteInput = nextRow.querySelector('td:nth-child(2) input');
+                if (nextNoteInput) {
+                    nextNoteInput.focus();
+                    nextNoteInput.select();
+                }
+            } else {
+                $('#empName').focus();
+            }
+        }
+    });
+
     tr.querySelector('button').addEventListener('click', ()=>{ 
       tr.remove(); 
       Array.from(shiftsBody.children).forEach((r,i)=> r.firstElementChild.textContent = (i+1)); 
@@ -647,7 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Initial setup
-  for(let i=0;i<3;i++) addShiftRow();
+  for(let i=0;i<6;i++) addShiftRow();
   addPaymentRow(payoutsBody);
 
   // Wire up buttons
@@ -747,6 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ['----- Daily Deposit Summary -----', ''],
         ['Store', store],
         ['Date', dt],
+        ['Prepared By', $('#empName').value || ''],
         ['', ''],
         ['----- POS Totals -----', ''],
         ['Cash Total (Tendered)', num($('#cashTotal').value)],
@@ -760,7 +819,9 @@ document.addEventListener('DOMContentLoaded', () => {
     Array.from(billsBody.querySelectorAll('tr')).forEach(tr => {
         const desc = tr.querySelector('input.pdesc')?.value || '(No Description)';
         const amt = num(tr.querySelector('input.pamt')?.value);
-        data.push([`  ${desc}`, amt]);
+        if (desc !== '(No Description)' || amt !== 0) {
+            data.push([`  ${desc}`, amt]);
+        }
     });
     data.push(['Total Bills', num($('#billsSum').textContent)]);
     data.push(['', '']);
@@ -769,7 +830,9 @@ document.addEventListener('DOMContentLoaded', () => {
     Array.from(payoutsBody.querySelectorAll('tr')).forEach(tr => {
         const desc = tr.querySelector('input.pdesc')?.value || '(No Description)';
         const amt = num(tr.querySelector('input.pamt')?.value);
-        data.push([`  ${desc}`, amt]);
+        if (desc !== '(No Description)' || amt !== 0) {
+            data.push([`  ${desc}`, amt]);
+        }
     });
     data.push(['Total Payouts', num($('#payoutsSum').textContent)]);
     data.push(['', '']);
@@ -782,6 +845,11 @@ document.addEventListener('DOMContentLoaded', () => {
         data.push([`Shift ${i+1}: ${notes}`, `Drop: ${fmt(drop)}`, `Coin: ${fmt(coin)}`]);
     });
     data.push(['Total Physical Cash', num($('#grossCash').textContent)]);
+    data.push(['', '']);
+
+    data.push(['----- Extras -----', '']);
+    data.push(['Change Bag Amount', num($('#changeBag').value)]);
+    data.push(['Notes', $('#generalNotes').value || '']);
     data.push(['', '']);
 
     data.push(['----- Results -----', '']);
@@ -803,7 +871,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (col > 0 && cell.t === 'n') {
             cell.z = '$#,##0.00';
         }
-        if(cell.v.toString().startsWith('-----')){
+        if(cell.v && cell.v.toString().startsWith('-----')){
             cell.s = { font: { bold: true } };
         }
     });
