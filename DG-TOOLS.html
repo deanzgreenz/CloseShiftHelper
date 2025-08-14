@@ -1,522 +1,600 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>DG Tools — Daily Deposit (v4.2)</title>
-<style>
-  :root{
-    --bg:#0f1219; --card:#171b26; --muted:#21293a; --ink:#e9edf3; --sub:#a6b3ca;
-    --ok:#12b981; --bad:#ef4444;
-  }
-  *{box-sizing:border-box}
-  html,body{height:100%}
-  body{margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-       background:var(--bg); color:var(--ink); line-height:1.45}
-  .wrap{max-width:980px;margin:0 auto;padding:16px}
-  h1,h2{margin:.2rem 0 .6rem}
-  .card{background:var(--card); border:1px solid #242c3f; border-radius:12px; padding:12px}
-  .grid{display:grid; gap:12px}
-  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
-  .col{flex:1 1 200px}
-  label{display:block; font-size:12px; color:#a6b3ca; margin-bottom:6px}
-  input, select, textarea{width:100%; padding:10px 12px; background:#0c111a; color:#e9edf3;
-    border:1px solid #2a3347; border-radius:10px;}
-  table{width:100%; border-collapse:collapse; font-size:14px}
-  th,td{padding:8px 10px; border-bottom:1px solid #242c3f}
-  th{text-align:left; color:#b8c3d8}
-  .right{text-align:right} .center{text-align:center}
-  .btn{background:#22c55e; color:white; border:none; border-radius:10px; padding:10px 12px; font-weight:600; cursor:pointer}
-  .btn.sub{background:#1f2937}
-  .pill{display:inline-block; padding:6px 10px; border-radius:999px; font-weight:700}
-  .ok{background:#03261b;color:#86efac;border:1px solid #14532d}
-  .bad{background:#2a0e0e;color:#fca5a5;border:1px solid #7f1d1d}
-  .sticky{position:sticky; top:0; z-index:20; backdrop-filter:blur(8px);
-          background:rgba(15,18,25,.9); border-bottom:1px solid #1b2333}
-  .mono{font-family: ui-monospace, Menlo, Consolas, monospace}
-  .help{font-size:11px; color:#93a4c4}
-  .muted{color:#93a4c4}
-
-@media print {
-  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  body { background: #fff !important; color: #000 !important; }
-  .wrap { padding: 0 !important; }
-  .card { background: #fff !important; border-color: #000 !important; }
-  .sticky { position: static !important; background: #fff !important; border:none !important; }
-  .btn, .help { display: none !important; }
-  table th, table td { border-color: #000 !important; }
-}
-
-</style>
+  <meta charset="UTF-8">
+  <title>Daily Deposit Helper</title>
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto; }
+    h1, h2, h3 { margin: .5em 0; }
+    .panel { border: 1px solid #ccc; padding: 20px; border-radius: 0 4px 4px 4px; margin-bottom: 20px; }
+    label { display: block; margin: .5em 0 0.2em; font-weight: bold; }
+    input, textarea { width: 100%; box-sizing: border-box; padding: 8px; margin-bottom: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    input[type="number"] { text-align: right; }
+    table { width: 100%; border-collapse: collapse; margin: 1em 0; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }
+    th { background-color: #f9f9f9; }
+    .small-input { width: 100px; display: inline-block; padding: 6px; }
+    .actions { margin-top: 20px; text-align: right; }
+    .actions button { padding: 10px 16px; margin-left: 8px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 1em; }
+    .actions button:hover { background-color: #0056b3; }
+    em { color: #555; font-size: .9em; font-style: italic; display: block; margin-top: -4px; margin-bottom: 8px; }
+    .summary-line, .results-line { margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .summary-line strong, .results-line strong { flex-basis: 60%; text-align: left; }
+    .summary-line span, .results-line span { flex-basis: 35%; text-align: right; font-weight: bold; background-color: #f0f0f0; padding: 4px 6px; border-radius: 3px;}
+    .vendor-row { display: flex; gap: 10px; margin-bottom: 5px; align-items: center;}
+    .vendor-row input.vendor-desc { flex-grow: 1; }
+    .vendor-row input.vendor-amount { width: 120px; flex-shrink: 0; }
+    .shift-coin-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; }
+    .shift-coin-row label { width: 60px; margin: 0; font-weight: normal; text-align: right; }
+    .shift-coin-row input { width: 100px; margin: 0; }
+    #preview { background:#f9f9f9; padding:15px; border: 1px solid #eee; border-radius: 4px; white-space: pre-wrap; font-family: monospace; max-height: 300px; overflow-y: auto; margin-top: 10px;}
+    .data-missing-warning { background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; margin-bottom: 20px; border-radius: 4px; display: none; } /* Initially hidden */
+    .data-missing-warning p { margin: 0 0 10px 0; }
+    .data-missing-warning ul { margin: 0; padding-left: 20px; }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
-<div class="sticky">
-  <div class="wrap grid" style="grid-template-columns: 1fr 1fr 1fr 1fr;">
-    <div class="card">
-      <div style="font-size:12px;letter-spacing:.12em;color:#93c5fd;text-transform:uppercase">Store</div>
-      <div id="sumStore" style="font-weight:800">—</div>
-      <div class="help" id="sumDate"></div>
-    </div>
-    <div class="card">
-      <div class="help" id="sumActualLabel">Actual Deposit</div>
-      <div id="sumActual" class="mono" style="font-size:18px;font-weight:800">$0.00</div>
-      <div class="help" id="sumActualFormula">= (Σ Drop + Σ Coin ±) - Payouts</div>
-    </div>
-    <div class="card">
-      <div class="help">POS Expected Cash</div>
-      <div id="sumExpected" class="mono" style="font-size:18px;font-weight:800">$0.00</div>
-      <div class="help" id="expectedFormula">= (Cash Tendered - Cashback) - Payouts</div>
-    </div>
-    <div class="card">
-      <div class="help">Difference</div>
-      <div id="sumDiff" class="mono" style="font-size:18px;font-weight:800">$0.00</div>
-      <div id="sumStatus" class="pill ok" style="margin-top:6px">OK</div>
-    </div>
-  </div>
-</div>
+  <h1>Daily Deposit Helper</h1>
 
-<div class="wrap">
-  <h1>DG Tools — Daily Deposit</h1>
-  <div class="grid" style="grid-template-columns:1fr 1fr;">
-    <section class="card">
-      <h2>1) POS Totals</h2>
-      <div class="row">
-        <div class="col">
-          <label>Store</label>
-          <select id="store">
-            <option value="">Select…</option>
-            <option>Sandy</option>
-            <option>Foster</option>
-            <option>Division</option>
-          </select>
-        </div>
-        <div class="col"><label>Date</label><input id="bizDate" type="date"></div>
-      </div>
-      <div class="row">
-        <div class="col"><label>Cash Total (Tendered)</label><input id="cashTotal" inputmode="decimal" placeholder="0.00"></div>
-        <div class="col"><label>Debit Total (Tendered)</label><input id="debitTotal" inputmode="decimal" placeholder="0.00"></div>
-      </div>
-      <div class="row">
-        <div class="col"><label>Cashback Given</label><input id="cashbackTotal" inputmode="decimal" placeholder="0.00"></div>
-        <div class="col"><label>Taxes (Collected)</label><input id="taxTotal" inputmode="decimal" placeholder="0.00"></div>
-      </div>
-      <div class="row">
-        <button id="btnPaste" class="btn sub">Paste from Clipboard</button>
-        <div class="help">Tip: On the POSaBIT Venue Dashboard: Ctrl+A, Ctrl+C, then click this. If your browser blocks clipboard, just press Ctrl+V anywhere on this page.</div>
-      </div>
-      <textarea id="pasteCatcher" aria-hidden="true" tabindex="-1" style="position:absolute;left:-9999px;top:-9999px;height:1px;width:1px"></textarea>
-    </section>
-
-    <section class="card">
-      <h2>2) Vendor Payouts / Bills</h2>
-      <div class="help">Defaults appear when you choose a store. Add rows for extras.</div>
-      <table id="payoutTable">
-        <thead>
-          <tr><th>Description</th><th class="right">Amount</th><th class="center">—</th></tr>
-        </thead>
-        <tbody></tbody>
-        <tfoot>
-          <tr><td class="right">Total Payouts</td><td class="right mono" id="payoutSum">$0.00</td><td></td></tr>
-        </tfoot>
-      </table>
-      <div class="row">
-        <button class="btn sub" id="addPayout">Add payout</button>
-        <button class="btn sub" id="applyDefaults">Re-apply store defaults</button>
-        <button class="btn sub" id="clearPayouts">Clear</button>
-      </div>
-    </section>
+  <div id="data-warning" class="data-missing-warning">
+      <p><strong>Important:</strong> Data from POSaBIT might be missing or incomplete.</p>
+      <p>Please ensure you run the bookmarklet on one of the official POSaBIT dashboard pages:</p>
+      <ul>
+          <li>Sandy: <a href="https://app.posabit.com/merchant/7836/venue/3495/dashboard" target="_blank">app.posabit.com/merchant/7836/venue/3495/dashboard</a></li>
+          <li>Foster: <a href="https://app.posabit.com/merchant/7836/venue/3496/dashboard" target="_blank">app.posabit.com/merchant/7836/venue/3496/dashboard</a></li>
+          <li>Division: <a href="https://app.posabit.com/merchant/7836/venue/3497/dashboard" target="_blank">app.posabit.com/merchant/7836/venue/3497/dashboard</a></li>
+      </ul>
+      <p>If "Total Tendered" and "Total Taxes" below are $0.00, the data was likely not pulled correctly.</p>
   </div>
 
-  <section class="card">
-    <h2>3) Shifts</h2>
-    <table id="shiftTable">
-      <thead><tr><th>#</th><th>Employee / Notes</th><th class="right">Shift Cash Drop (bills)</th><th class="right">Shift Coin ±</th><th class="center">—</th></tr></thead>
-      <tbody></tbody>
-      <tfoot><tr><td></td><td class="right">Totals</td><td class="right mono" id="dropSum">$0.00</td><td class="right mono" id="coinSum">$0.00</td><td></td></tr></tfoot>
-    </table>
-    <div class="row" style="margin-top:10px">
-      <button class="btn sub" id="addShift">Add shift</button>
-      <button class="btn sub" id="clearShifts">Clear</button>
+  <div id="daily-deposit" class="panel">
+    <h2>Complete Daily Deposit</h2>
+
+    <label for="emp-name">Name:</label>
+    <input id="emp-name" placeholder="Your name">
+
+    <label for="dd-date">Date:</label>
+    <input id="dd-date" type="date">
+
+    <label for="dd-venue">Venue:</label>
+    <input id="dd-venue" readonly>
+
+    <h3>Vendor Payouts / Bills</h3>
+    <div id="vendor-list">
+      <div class="vendor-row">
+          <input class="vendor-desc" type="text" placeholder="Description 1">
+          <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
+      </div>
+      <div class="vendor-row">
+          <input class="vendor-desc" type="text" placeholder="Description 2">
+          <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
+      </div>
+      <div class="vendor-row">
+          <input class="vendor-desc" type="text" placeholder="Description 3">
+          <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
+      </div>
+      <div class="vendor-row">
+          <input class="vendor-desc" type="text" placeholder="Description 4">
+          <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
+      </div>
+      <div class="vendor-row">
+          <input class="vendor-desc" type="text" placeholder="Description 5">
+          <input class="vendor-amount" type="number" step="0.01" value="0" placeholder="Amount">
+      </div>
     </div>
-  </section>
-
-  <section class="card">
-    <h2>Change Bag (Note Only)</h2>
-    <div class="row">
-      <div class="col"><label>Change Bag Amount</label><input id="changeBag" inputmode="decimal" placeholder="0.00"></div>
-      <div class="col"><label>Note</label><input id="changeNote" placeholder="Describe (not used in math)"></div>
+    <div class="summary-line">
+      <strong>Total Vendor Payouts ($):</strong>
+      <span id="total-vendor">0.00</span>
     </div>
-    <div class="help">For record-keeping only. Not included in any calculations.</div>
-  </section>
 
-  <section class="card">
-    <h2>4) Results</h2>
-    <div class="row" style="margin:8px 0 4px 0">
-      <label style="display:flex; gap:8px; align-items:center; font-weight:600;">
-        <input type="checkbox" id="enterGross" checked>
-        Enter shift drops <b>BEFORE</b> taxes &amp; payouts are pulled
-      </label>
+    <h3>Totals</h3>
+    <div class="summary-line"><strong>Cash Total ($):</strong> <span id="dd-cash-total">0.00</span></div>
+    <div class="summary-line"><strong>Cashback Given ($):</strong> <span id="dd-cashback-total">0.00</span></div>
+    <div class="summary-line"><strong>Debit Card Total ($):</strong> <span id="dd-debit-total">0.00</span></div>
+    <div class="summary-line"><strong>Total Tendered ($):</strong> <span id="dd-tendered">0.00</span></div>
+    <div class="summary-line"><strong>Total Taxes ($):</strong> <span id="dd-taxes">0.00</span></div>
+    <div class="summary-line"><strong>Net from POSaBIT Sales ($):</strong> <span id="dd-net-sales">0.00</span></div>
+    <div class="summary-line"><strong>Net Deposit After Bills ($):</strong> <span id="dd-net-after-bills">0.00</span></div>
+
+    <h3>Cash &amp; Coins</h3>
+    <div>
+      <label for="closing-cash">Total Closing Cash ($):</label>
+      <input id="closing-cash" type="number" step="0.01" value="0">
+      <em>Remaining cash after setting aside Taxes &amp; Bills</em>
     </div>
-    <div class="help" id="grossNote">In this mode, the tool auto‑subtracts Vendor Payouts from the deposit.</div>
-    <table>
-      <tbody>
-        <tr><td id="actualLabel">Actual Deposit (after payouts)</td><td class="right mono" id="actual">$0.00</td></tr>
-        <tr id="grossRow" style="display:none;"><td>Gross Closing Cash (Σ Drop + Σ Coin ±)</td><td class="right mono" id="grossCash">$0.00</td></tr>
-        <tr><td id="expectedLabel">POS Expected Cash</td><td class="right mono" id="expected">$0.00</td></tr>
-        <tr><td><b>Difference (Actual − Expected)</b></td><td class="right mono" id="diff">$0.00</td></tr>
-      </tbody>
-    </table>
-    <div class="row" style="margin-top:10px">
-      <button class="btn" id="exportBtn">Export (.xlsx if available, else .csv)</button>
-      <button class="btn sub" id="printBtn">Print / Save PDF</button>
+    <h4>Shift Coin Adjustments</h4>
+    <div id="coin-adjust-list">
+      <div class="shift-coin-row"><label for="shift1-coin">Shift 1:</label> <input id="shift1-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
+      <div class="shift-coin-row"><label for="shift2-coin">Shift 2:</label> <input id="shift2-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
+      <div class="shift-coin-row"><label for="shift3-coin">Shift 3:</label> <input id="shift3-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
+      <div class="shift-coin-row"><label for="shift4-coin">Shift 4:</label> <input id="shift4-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
+      <div class="shift-coin-row"><label for="shift5-coin">Shift 5:</label> <input id="shift5-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
+      <div class="shift-coin-row"><label for="shift6-coin">Shift 6:</label> <input id="shift6-coin" class="shift-coin" type="number" step="0.01" value="0"></div>
     </div>
-    <div class="help">To enable .xlsx, include SheetJS on the page. See commented script tag at the bottom.</div>
-  </section>
-</div>
+     <div class="summary-line"><strong>Total Closing Coin Adjustments ($):</strong> <span id="total-coin-adjust-shifts">0.00</span></div>
+     <div class="summary-line"><strong>Total Cash &amp; Coins ($):</strong> <span id="total-cash-coins">0.00</span></div>
 
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  const $ = s => document.querySelector(s), $$ = s => Array.from(document.querySelectorAll(s));
-  const fmt = n => (isFinite(n)?n:0).toLocaleString(undefined,{style:'currency',currency:'USD'});
-  const num = v => { if(typeof v==='number') return v; const s=(''+(v||'')).replace(/[^0-9.\\-]/g,''); const n=parseFloat(s); return isFinite(n)?n:0; };
-  const r2 = n => Math.round((n+Number.EPSILON)*100)/100;
+    <h3>Results</h3>
+    <div class="results-line"><strong>Actual Deposit ($):</strong> <span id="res-actual">0.00</span></div>
+    <div class="results-line"><strong>Net Deposit ($):</strong> <span id="res-net-deposit">0.00</span></div>
+    <div class="results-line"><strong>Difference ($):</strong> <span id="res-difference">0.00</span></div>
 
-  const DEFAULTS = {
-    "Sandy":[["Sandy Rent",350],["Sandy Bills",200]],
-    "Foster":[["Foster Rent",350],["Foster Bills",150]],
-    "Division":[["Division Rent",350],["Division Bills",150]],
-  };
+    <label for="change-bag">Money from Change Bag ($):</label>
+    <input id="change-bag" type="number" step="0.01" value="0">
 
-  const p = new URLSearchParams(location.search);
-  const set = (sel,key) => { const v=p.get(key); if(v!=null){ const el=$(sel); if(el) el.value=v; } };
-  set('#store','store'); set('#cashTotal','cashTotal'); set('#debitTotal','debitTotal'); set('#cashbackTotal','cashbackTotal'); set('#taxTotal','tax');
-  const d=new Date(), pad=x=>x.toString().padStart(2,'0');
-  const bizDate = $('#bizDate'); if(bizDate) bizDate.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+    <label for="notes">Notes:</label>
+    <textarea id="notes" rows="3"></textarea>
 
-  const pbody = $('#payoutTable tbody');
-  const sbody = $('#shiftTable tbody');
+    <h3>Preview</h3>
+    <pre id="preview"></pre>
 
-  function recalc(){
-    const cash = num($('#cashTotal')?.value);
-    const debit = num($('#debitTotal')?.value);
-    const cashback = num($('#cashbackTotal')?.value);
-    const tax = num($('#taxTotal')?.value);
-    const drop = r2(Array.from(sbody?.querySelectorAll('td:nth-child(3) input')||[]).reduce((a,el)=>a+num(el.value),0));
-    const coin = r2(Array.from(sbody?.querySelectorAll('td:nth-child(4) input')||[]).reduce((a,el)=>a+num(el.value),0));
-    $('#dropSum').textContent = fmt(drop);
-    $('#coinSum').textContent = fmt(coin);
-    const payouts = r2(Array.from(pbody?.querySelectorAll('td:nth-child(2) input')||[]).reduce((a,el)=>a+num(el.value),0));
-    $('#payoutSum').textContent = fmt(payouts);
+    <div class="actions">
+      <button id="calc-daily-deposit">Calculate & Preview Deposit</button>
+      <button id="export-excel">Save Daily Deposit Sheet</button>
+    </div>
+  </div>
 
-    const grossMode = document.querySelector('#enterGross')?.checked;
-    const gross = r2(drop + coin);
+  <script>
+  document.addEventListener('DOMContentLoaded', ()=>{
+    console.log("DOMContentLoaded event fired."); // Log script start
 
-    // --- FINAL MATH FIX (v4.2) ---
-    // "Actual Deposit" is the physically counted cash minus physical cash payouts.
-    const actual = grossMode ? r2(gross - payouts) : gross;
-    
-    // "Expected" cash is what the POS says should be there. This is the Cash Tendered,
-    // minus any cash given back (Cashback), minus any cash paid out for bills (Payouts).
-    // Taxes and Debit totals are irrelevant to the final cash deposit amount.
-    const expected = r2(cash - cashback - payouts);
-    // --- END FIX ---
+    const round = (num) => Math.round((num + Number.EPSILON) * 100) / 100;
 
-    const diff = r2(actual - expected);
+    // Only one tab remains, so no tab switching logic needed
 
-    // UI labels for mode
-    const actualLabel = $('#actualLabel');
-    const expectedLabel = $('#expectedLabel');
-    const sumActualFormula = $('#sumActualFormula');
-    const expectedFormula = $('#expectedFormula');
-    const grossRow = $('#grossRow');
-    const grossCash = $('#grossCash');
-    
-    if (grossMode) {
-        if(actualLabel) actualLabel.textContent = 'Actual Deposit (after payouts)';
-        if(sumActualFormula) sumActualFormula.textContent = '= (Σ Drop + Σ Coin ±) - Payouts';
-    } else {
-        if(actualLabel) actualLabel.textContent = 'Actual Deposit (Σ Drop + Σ Coin ±)';
-        if(sumActualFormula) sumActualFormula.textContent = '= Σ Drop + Σ Coin ±';
+    // --- Parse URL params for both old and new bookmarklets ---
+    const params = new URLSearchParams(location.search);
+    let cashTotal = parseFloat(params.get('cashTotal'));
+    let cashbackTotal = parseFloat(params.get('cashbackTotal'));
+    let debitTotal = parseFloat(params.get('debitTotal'));
+    let taxes = parseFloat(params.get('tax'));
+    let store = params.get('store') || 'Unknown Venue';
+    // Fallback for old bookmarklet: treat tendered as cashTotal if cashTotal is missing
+    if (isNaN(cashTotal)) {
+      const tendered = parseFloat(params.get('tendered'));
+      cashTotal = isNaN(tendered) ? 0.00 : tendered;
     }
-    if(expectedLabel) expectedLabel.textContent = 'POS Expected Cash';
-    if(expectedFormula) expectedFormula.textContent = '= (Cash Tendered - Cashback) - Payouts';
+    if (isNaN(cashbackTotal)) cashbackTotal = 0.00;
+    if (isNaN(debitTotal)) debitTotal = 0.00;
+    if (isNaN(taxes)) taxes = 0.00;
+    // Derived values
+    const netDebitDeposit = debitTotal - cashbackTotal;
+    const netTendered = cashTotal + debitTotal;
+    const netSales = netTendered - taxes;
+    // For warning logic, show warning if both netTendered and taxes are zero (regardless of store)
+    const netTenderedZero = netTendered === 0;
+    const taxesZero = taxes === 0;
+    console.log("URL Params:", { cashTotal, cashbackTotal, debitTotal, taxes, store });
 
-    if (grossRow) grossRow.style.display = grossMode ? '' : 'none';
-    if (grossCash) grossCash.textContent = fmt(gross);
-
-    document.querySelector('#grossNote')?.classList.toggle('showing', !!grossMode);
-
-    $('#actual').textContent = fmt(actual);
-    $('#expected').textContent = fmt(expected);
-    $('#diff').textContent = fmt(diff);
-
-    $('#sumStore').textContent = $('#store')?.value || '—';
-    const dt = $('#bizDate')?.value; $('#sumDate').textContent = dt ? new Date(dt+'T00:00').toLocaleDateString() : '';
-    $('#sumActual').textContent = fmt(actual);
-    $('#sumExpected').textContent = fmt(expected);
-    $('#sumDiff').textContent = fmt(diff);
-    const status = $('#sumStatus'); const abs = Math.abs(diff);
-    status.textContent = abs < 1.00 ? 'OK' : (diff>0 ? 'Over' : 'Short');
-    status.className = 'pill ' + (abs<1.00 ? 'ok' : 'bad');
-  }
-
-  function addPayoutRow(desc='', amount=''){
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td><input class="pdesc" placeholder="Description" value="${desc}"></td>
-      <td class="right"><input class="pamt" inputmode="decimal" placeholder="0.00" value="${amount}"></td>
-      <td class="center"><button class="btn sub" type="button">Remove</button></td>`;
-    tr.querySelector('button')?.addEventListener('click', ()=>{ tr.remove(); recalc(); });
-    pbody?.appendChild(tr);
-  }
-  function clearPayouts(){ if(pbody){ pbody.innerHTML=''; recalc(); } }
-  function applyStoreDefaults(){
-    const store = $('#store')?.value;
-    clearPayouts();
-    (DEFAULTS[store]||[]).forEach(([d,a])=> addPayoutRow(d,a));
-    recalc();
-  }
-
-  function addShiftRow(note='', drop='', coin=''){
-    const idx = (sbody?.children.length||0) + 1;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="mono">${idx}</td>
-      <td><input placeholder="Name / notes" value="${note}"/></td>
-      <td class="right"><input inputmode="decimal" placeholder="0.00" value="${drop}"/></td>
-      <td class="right"><input inputmode="decimal" placeholder="0.00" value="${coin}"/></td>
-      <td class="center"><button class="btn sub" type="button">Remove</button></td>`;
-    tr.querySelector('button')?.addEventListener('click', ()=>{ tr.remove(); renumber(); recalc(); });
-    sbody?.appendChild(tr);
-  }
-  function renumber(){ Array.from(sbody?.children||[]).forEach((tr,i)=> tr.firstElementChild.textContent = (i+1)); }
-
-  // Seed initial rows
-  for(let i=0;i<5;i++) addShiftRow();
-
-  // Wire buttons
-  $('#addPayout')?.addEventListener('click', ()=> addPayoutRow());
-  $('#clearPayouts')?.addEventListener('click', clearPayouts);
-  $('#applyDefaults')?.addEventListener('click', applyStoreDefaults);
-  $('#addShift')?.addEventListener('click', ()=> addShiftRow());
-  $('#clearShifts')?.addEventListener('click', ()=>{ if(sbody){ sbody.innerHTML=''; recalc(); } });
-
-  // Store change -> defaults
-  $('#store')?.addEventListener('change', applyStoreDefaults);
-
-  // Live recalc
-  document.addEventListener('input', e=>{ if(e.target.matches('input,select')) recalc(); });
-
-  // Toggle recalc for gross mode
-  document.querySelector('#enterGross')?.addEventListener('change', recalc);
-
-  function parseDashboard(text) {
-    if (!text) return false;
-    
-    text = text.replace(/\u00a0/g, ' ').replace(/\r/g, '');
-
-    const asDollars = s => {
-        if (!s) return 0;
-        const match = String(s).match(/-?\$?[\d,]+\.\d{2}/);
-        if (!match) return 0;
-        const cleaned = match[0].replace(/[^0-9.\-]/g, '');
-        const num = parseFloat(cleaned);
-        return isFinite(num) ? num : 0;
-    };
-
-    const storeMatch = text.match(/Deanz Greenz\s*-\s*(Sandy|Foster|Division)/i);
-    if (storeMatch) {
-        const storeName = storeMatch[1];
-        if (document.querySelector('#store')) {
-            document.querySelector('#store').value = storeName;
-            applyStoreDefaults();
+    // --- Check for missing POSaBIT data ---
+    const dataWarningDiv = document.getElementById('data-warning');
+    // Always hide first, then show if needed
+    if (dataWarningDiv) dataWarningDiv.style.display = 'none';
+    // Show warning if both netTendered and taxes are zero (regardless of store)
+    if (netTenderedZero && taxesZero) {
+        if (dataWarningDiv) {
+            // Move warning to top of body if not already there
+            if (dataWarningDiv.parentElement !== document.body) {
+                document.body.insertBefore(dataWarningDiv, document.body.firstChild);
+            }
+            dataWarningDiv.style.display = 'block';
+            // Optionally scroll to top for visibility
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            console.log("Data warning div displayed at top.");
+        } else {
+            console.error("data-warning div not found!");
         }
     }
 
-    let cashTotal = 0, debitTotal = 0, cashbackTotal = 0, taxTotal = 0;
 
-    const paymentMethodSectionMatch = text.match(/Payment Method([\s\S]*?)(?:TaxApplicable|$)/i);
-    if (paymentMethodSectionMatch) {
-        const paymentSection = paymentMethodSectionMatch[1];
-        const segments = paymentSection.split(/(?=Cash\b|Debit Card\b|Debit\b|Cashless ATM\b|Cashback\b|Total\b)/gi);
-        
-        segments.forEach(segment => {
-            const trimmedSegment = segment.trim();
-            if (!trimmedSegment) return;
-            const amounts = trimmedSegment.match(/-?\$[\d,]+\.\d{2}/g);
-            if (!amounts || amounts.length === 0) return;
-            const lastAmount = amounts[amounts.length - 1];
-            
-            if (/^cash(?!back)/i.test(trimmedSegment)) {
-                cashTotal = asDollars(lastAmount);
-            } else if (/^cashback/i.test(trimmedSegment)) {
-                cashbackTotal = asDollars(lastAmount);
-            } else if (/^debit/i.test(trimmedSegment)) {
-                debitTotal = asDollars(lastAmount);
+
+
+    // --- Daily Deposit Tab Logic ---
+    const ddTenderedDisplay = document.getElementById('dd-tendered');
+    const ddTaxesDisplay = document.getElementById('dd-taxes');
+    const ddNetSalesDisplay = document.getElementById('dd-net-sales');
+    const totalVendorDisplay = document.getElementById('total-vendor');
+    const ddNetAfterBillsDisplay = document.getElementById('dd-net-after-bills');
+    const closingCashInput = document.getElementById('closing-cash');
+    const totalCoinAdjustShiftsDisplay = document.getElementById('total-coin-adjust-shifts');
+    const totalCashCoinsDisplay = document.getElementById('total-cash-coins');
+    const resActualDisplay = document.getElementById('res-actual');
+    const resNetDepositDisplay = document.getElementById('res-net-deposit');
+    const resDifferenceDisplay = document.getElementById('res-difference');
+    const previewArea = document.getElementById('preview');
+    const changeBagInput = document.getElementById('change-bag');
+    const notesInput = document.getElementById('notes');
+    const empNameInput = document.getElementById('emp-name');
+    const ddDateInput = document.getElementById('dd-date');
+    const ddVenueInput = document.getElementById('dd-venue');
+
+    if (!ddTenderedDisplay || !ddTaxesDisplay || !ddNetSalesDisplay || !totalVendorDisplay ||
+        !ddNetAfterBillsDisplay || !closingCashInput || !totalCoinAdjustShiftsDisplay ||
+        !totalCashCoinsDisplay || !resActualDisplay || !resNetDepositDisplay ||
+        !resDifferenceDisplay || !previewArea || !changeBagInput || !notesInput ||
+        !empNameInput || !ddDateInput || !ddVenueInput) {
+        console.error("One or more critical elements for 'Daily Deposit' tab are missing!");
+        // return; // Optionally stop
+    }
+    console.log("Daily Deposit tab elements obtained.");
+
+    // ...existing code...
+
+    // Set values for all summary fields
+    if(document.getElementById('dd-cash-total')) document.getElementById('dd-cash-total').textContent = cashTotal.toFixed(2);
+    if(document.getElementById('dd-cashback-total')) document.getElementById('dd-cashback-total').textContent = cashbackTotal.toFixed(2);
+    if(document.getElementById('dd-debit-total')) document.getElementById('dd-debit-total').textContent = debitTotal.toFixed(2);
+    if(ddTenderedDisplay) ddTenderedDisplay.textContent = netTendered.toFixed(2);
+    if(ddTaxesDisplay) ddTaxesDisplay.textContent = taxes.toFixed(2);
+    if(ddNetSalesDisplay) ddNetSalesDisplay.textContent = netSales.toFixed(2);
+    if(ddDateInput) {
+      // Use local date (not UTC) for Portland/Pacific users
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      ddDateInput.value = `${year}-${month}-${day}`;
+    }
+    if(ddVenueInput) ddVenueInput.value = store;
+    console.log("Initial Daily Deposit fields populated.");
+
+
+    document.getElementById('calc-daily-deposit').onclick = () => {
+      try {
+        let totalVendorPayouts = 0;
+        document.querySelectorAll('.vendor-amount').forEach(input => {
+          totalVendorPayouts += +input.value || 0;
+        });
+        if(totalVendorDisplay) totalVendorDisplay.textContent = totalVendorPayouts.toFixed(2);
+
+        // Use new netSales and netTendered
+        if(ddNetSalesDisplay) ddNetSalesDisplay.textContent = netSales.toFixed(2);
+        if(ddTenderedDisplay) ddTenderedDisplay.textContent = netTendered.toFixed(2);
+
+        const netDepositAfterBills = round(netSales - totalVendorPayouts);
+        if(ddNetAfterBillsDisplay) ddNetAfterBillsDisplay.textContent = netDepositAfterBills.toFixed(2);
+
+        const totalClosingCash = closingCashInput ? (+closingCashInput.value || 0) : 0;
+        let totalShiftCoinAdjustments = 0;
+        document.querySelectorAll('.shift-coin').forEach(input => {
+          totalShiftCoinAdjustments += +input.value || 0;
+        });
+        if(totalCoinAdjustShiftsDisplay) totalCoinAdjustShiftsDisplay.textContent = totalShiftCoinAdjustments.toFixed(2);
+
+        const totalCashAndCoins = round(totalClosingCash + totalShiftCoinAdjustments);
+        if(totalCashCoinsDisplay) totalCashCoinsDisplay.textContent = totalCashAndCoins.toFixed(2);
+
+        // Net Debit Deposit display removed
+
+        // --- Actual Deposit includes Net Debit Deposit ---
+        const actualDeposit = totalCashAndCoins + netDebitDeposit;
+        if(resActualDisplay) resActualDisplay.textContent = actualDeposit.toFixed(2);
+        if(resNetDepositDisplay) resNetDepositDisplay.textContent = netDepositAfterBills.toFixed(2);
+
+        const difference = round(actualDeposit - netDepositAfterBills);
+        if(resDifferenceDisplay) {
+            resDifferenceDisplay.textContent = difference.toFixed(2);
+            if (Math.abs(difference) < 0.01) {
+              resDifferenceDisplay.style.color = 'green';
+            } else if (difference > 0) {
+              resDifferenceDisplay.style.color = 'blue';
+            } else {
+              resDifferenceDisplay.style.color = 'red';
+            }
+        }
+
+        const vendorRows = [];
+        document.querySelectorAll('#vendor-list .vendor-row').forEach((row, idx) => {
+          const descEl = row.querySelector('.vendor-desc');
+          const amountEl = row.querySelector('.vendor-amount');
+          const desc = descEl ? descEl.value.trim() : '';
+          const amount = amountEl ? (+amountEl.value || 0) : 0;
+          if(desc || amount > 0) {
+              vendorRows.push(`  ${idx+1}. ${desc || '(No Description)'}: $${amount.toFixed(2)}`);
+          }
+        });
+        const shiftAdjustRows = [];
+        document.querySelectorAll('.shift-coin').forEach((input, idx) => {
+            const adj = +input.value || 0;
+            if (adj !== 0) {
+              shiftAdjustRows.push(`  Shift ${idx+1}: $${adj.toFixed(2)}`);
             }
         });
-    }
-
-    const taxLineMatch = text.match(/Oregon State Marijuana Tax - 20%[^\$]*\$[\d,.-]+[^\$]*(\$[\d,.-]+)/i);
-    if (taxLineMatch) {
-        taxTotal = asDollars(taxLineMatch[1]);
-    }
-
-    const updateField = (selector, value) => {
-        const field = document.querySelector(selector);
-        if (field) {
-            if (value === 0 && selector !== '#cashbackTotal') {
-                 field.value = '';
-            } else {
-                 field.value = value.toFixed(2);
-            }
+        const currentEmpName = empNameInput ? empNameInput.value : 'N/A';
+        // Use local date for preview if input is missing
+        let currentDate = '';
+        if (ddDateInput && ddDateInput.value) {
+          currentDate = ddDateInput.value;
+        } else {
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = String(now.getMonth() + 1).padStart(2, '0');
+          const day = String(now.getDate()).padStart(2, '0');
+          currentDate = `${year}-${month}-${day}`;
         }
+        const currentChangeBag = changeBagInput ? (+changeBagInput.value||0).toFixed(2) : '0.00';
+        const currentNotes = notesInput ? notesInput.value : '(None)';
+
+        // --- Preview summary with new fields ---
+        const previewLines = [
+          `----- Daily Deposit Summary -----`,
+          `Name: ${currentEmpName}`,
+          `Date: ${currentDate}`,
+          `Venue: ${store}`,
+          `---------------------------------`,
+          `Cash Total:          $${cashTotal.toFixed(2)}`,
+          `Debit Total:         $${debitTotal.toFixed(2)}`,
+          `Cashback Given:      $${cashbackTotal.toFixed(2)}`,
+          `---------------------------------`,
+          `Total Tendered:      $${netTendered.toFixed(2)}`,
+          `Total Taxes:         $${taxes.toFixed(2)}`,
+          `Net Sales:           $${netSales.toFixed(2)}`,
+          `---------------------------------`,
+          `Vendor Payouts/Bills:`,
+          ...(vendorRows.length > 0 ? vendorRows : ['  (None)']),
+          `Total Payouts:       $${totalVendorPayouts.toFixed(2)}`,
+          `Net Dep After Bills: $${netDepositAfterBills.toFixed(2)}`,
+          `---------------------------------`,
+          `Total Closing Cash:  $${totalClosingCash.toFixed(2)}`,
+          `Shift Coin Adjustments:`,
+          ...(shiftAdjustRows.length > 0 ? shiftAdjustRows : ['  (None)']),
+          `Total Adjustments:   $${totalShiftCoinAdjustments.toFixed(2)}`,
+          `Total Cash & Coins:  $${totalCashAndCoins.toFixed(2)}`,
+          `---------------------------------`,
+          `Actual Deposit:      $${actualDeposit.toFixed(2)}`,
+          `Net Deposit Req:     $${netDepositAfterBills.toFixed(2)}`,
+          `Difference:          $${difference.toFixed(2)} ${Math.abs(difference) < 0.01 ? '(OK)' : (difference > 0 ? '(Over)' : '(Short)')}`,
+          `---------------------------------`,
+          `Money from Change Bag: $${currentChangeBag}`,
+          `Notes: ${currentNotes}`,
+          `---------------------------------`
+        ];
+        if(previewArea) previewArea.textContent = previewLines.join('\n');
+      } catch (e) {
+        console.error("Error in calc-daily-deposit handler:", e);
+      }
     };
+    console.log("calc-daily-deposit click handler defined.");
 
-    updateField('#cashTotal', cashTotal);
-    updateField('#debitTotal', debitTotal);
-    updateField('#cashbackTotal', cashbackTotal);
-    updateField('#taxTotal', taxTotal);
+    document.getElementById('export-excel').onclick = () => {
+      try {
+        const calcButton = document.getElementById('calc-daily-deposit');
+        if (calcButton) calcButton.click();
 
-    recalc();
-    return true;
+        const wb = XLSX.utils.book_new();
+        const data = [];
+        const headerRows = [];
+        const getVal = id => { const el = document.getElementById(id); return el ? (el.value || '').trim() : ''; };
+        const getNumFromTxt = id => {
+            const el = document.getElementById(id);
+            const text = el ? (el.textContent || '').replace(/[$,]/g, '') : '';
+            return parseFloat(text) || 0;
+        }
+        const getNumFromVal = id => {
+            const el = document.getElementById(id);
+            const text = el ? (el.value || '').replace(/[$,]/g, '') : '';
+            return parseFloat(text) || 0;
+        }
+
+        headerRows.push(data.length);
+        data.push(['----- Daily Deposit Summary -----']);
+        data.push(['Name', getVal('emp-name')]);
+        data.push(['Date', getVal('dd-date')]);
+        data.push(['Venue', store]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['----- Cash & Debit Details -----']);
+        data.push(['Cash Total', cashTotal]);
+        data.push(['Debit Total', debitTotal]);
+        data.push(['Cashback Given', cashbackTotal]);
+        data.push([]);
+        data.push(['----- Sales & Taxes -----']);
+        data.push(['Total Tendered', netTendered]);
+        data.push(['Total Taxes', taxes]);
+        data.push(['Net from POSaBIT Sales', netSales]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['----- Vendor Payouts / Bills -----']);
+        let vendorCount = 0;
+        document.querySelectorAll('#vendor-list .vendor-row').forEach((row) => {
+          const descInput = row.querySelector('.vendor-desc');
+          const amountInput = row.querySelector('.vendor-amount');
+          const desc = descInput ? descInput.value.trim() : '';
+          const amount = amountInput ? (+amountInput.value || 0) : 0;
+          if (desc || amount > 0) {
+            data.push([`  ${desc || '(No Description)'}`, amount]);
+            vendorCount++;
+          }
+        });
+        if (vendorCount === 0) { data.push(['  (None)']); }
+        data.push([]);
+        data.push(['Total Vendor Payouts', getNumFromTxt('total-vendor')]);
+        data.push(['Net Deposit After Bills', getNumFromTxt('dd-net-after-bills')]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['----- Cash & Coins -----']);
+        data.push(['Total Closing Cash', getNumFromVal('closing-cash')]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['Shift Coin Adjustments']);
+        let adjCount = 0;
+        document.querySelectorAll('.shift-coin').forEach((i, idx) => {
+            const adjValue = +i.value || 0;
+            if (adjValue !== 0) {
+                data.push([`  Shift ${idx + 1}`, adjValue]);
+                adjCount++;
+            }
+        });
+        if (adjCount === 0) { data.push(['  (None)']); }
+        data.push([]);
+        data.push(['Total Closing Coin Adjustments', getNumFromTxt('total-coin-adjust-shifts')]);
+        data.push(['Total Cash & Coins', getNumFromTxt('total-cash-coins')]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['----- Results -----']);
+        data.push(['Actual Deposit', getNumFromTxt('res-actual')]);
+        data.push(['Net Deposit', getNumFromTxt('res-net-deposit')]);
+        data.push(['Difference', getNumFromTxt('res-difference')]);
+        data.push([]);
+        headerRows.push(data.length);
+        data.push(['----- Extras -----']);
+        data.push(['Money from Change Bag', getNumFromVal('change-bag')]);
+        data.push(['Notes', getVal('notes')]);
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        ws['!cols'] = [{ wch: 35 }, { wch: 15 }];
+        const merges = [];
+        headerRows.forEach(rowIndex => {
+          const cellRef = XLSX.utils.encode_cell({ r: rowIndex, c: 0 });
+          if (ws[cellRef]) {
+                ws[cellRef].s = { font: { bold: true } };
+                merges.push({ s: { r: rowIndex, c: 0 }, e: { r: rowIndex, c: 1 } });
+            }
+            if (ws[cellRef] && ws[cellRef].v === 'Shift Coin Adjustments') {
+                ws[cellRef].s = { font: { bold: true } };
+            }
+        });
+        ws['!merges'] = merges;
+        const currencyFormat = '$#,##0.00';
+        Object.keys(ws).forEach(cellRef => {
+            if (cellRef[0] === '!' || headerRows.includes(XLSX.utils.decode_cell(cellRef).r)) return;
+            const cell = ws[cellRef];
+            const col = XLSX.utils.decode_cell(cellRef).c;
+            if (col === 1 && cell.t === 'n') {
+                  cell.z = currencyFormat;
+            }
+        });
+        XLSX.utils.book_append_sheet(wb, ws, 'Daily Deposit');
+        const filename = `${store.replace(/ /g, '_')}_${getVal('dd-date')}_DailyDeposit.xlsx`;
+        XLSX.writeFile(wb, filename);
+      } catch (e) {
+        console.error("Error in export-excel handler:", e);
+        alert("Error generating Excel file. Check console for details.");
+      }
+    };
+    console.log("export-excel click handler defined.");
+
+
+    // --- Enter Key Navigation ---
+    // --- Enter Key Navigation for Daily Deposit Panel Only ---
+    function setupEnterKeyNavigation(panelElement) {
+        if (!panelElement) return;
+        const focusableElements = Array.from(
+            panelElement.querySelectorAll('input[type="text"], input[type="number"], textarea')
+        ).filter(el => !el.readOnly && el.offsetParent !== null);
+        focusableElements.forEach((el, index) => {
+            el.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.keyCode === 13) {
+                    event.preventDefault();
+                    const nextElement = focusableElements[index + 1];
+                    if (nextElement) {
+                        nextElement.focus();
+                        if (nextElement.select) nextElement.select();
+                    } else {
+                        const dailyDepositCalcButton = document.getElementById('calc-daily-deposit');
+                        if (el.id === 'notes' && dailyDepositCalcButton) {
+                            dailyDepositCalcButton.focus();
+                        } else if (focusableElements[index + 1] === undefined && dailyDepositCalcButton) {
+                            dailyDepositCalcButton.focus();
+                        }
+                    }
+                }
+            });
+        });
+    }
+    console.log("setupEnterKeyNavigation function defined.");
+
+    // Only one panel remains, so set up navigation for it directly
+    const dailyDepositPanel = document.getElementById('daily-deposit');
+    if (dailyDepositPanel) {
+        setupEnterKeyNavigation(dailyDepositPanel);
+        console.log("Enter key navigation setup for daily deposit panel");
+    }
+
+    // Defer initial calculation for daily deposit only
+    setTimeout(() => {
+        try {
+            const calcDailyDepositButton = document.getElementById('calc-daily-deposit');
+            if (calcDailyDepositButton) {
+                calcDailyDepositButton.click();
+                console.log("Deferred click on calc-daily-deposit successful.");
+            } else {
+                console.error("calc-daily-deposit button not found for deferred click.");
+            }
+        } catch (e) {
+            console.error("Error during deferred initial calc-daily-deposit:", e);
+        }
+    }, 0);
+
+    console.log("DOMContentLoaded script finished.");
+  });
+  </script>
+<script>
+  function getParam(param) {
+    return new URLSearchParams(window.location.search).get(param);
   }
 
-  $('#btnPaste')?.addEventListener('click', async (e)=>{
-    e.preventDefault();
-    try{
-      const txt = await navigator.clipboard.readText();
-      if(txt && parseDashboard(txt)) return;
-    }catch(err){ 
-      console.warn("Clipboard API failed, falling back to paste event.", err);
-    }
-    const cat = $('#pasteCatcher');
-    cat.value=''; cat.style.left='0'; cat.style.top='0'; cat.focus();
-    alert('Clipboard blocked or failed. Please press Ctrl+V (or ⌘V) now.');
+  document.addEventListener("DOMContentLoaded", function () {
+    const dateField = document.getElementById("dd-date");
+    const storeField = document.getElementById("dd-venue");
+    const tenderedEl = document.getElementById("dd-tendered");
+    const taxEl = document.getElementById("dd-taxes");
+
+    const dateParam = getParam("date");
+    const storeParam = getParam("store");
+    const tenderedParam = getParam("tendered");
+    const taxParam = getParam("tax");
+
+    if (dateField && dateParam) dateField.value = dateParam;
+    if (storeField && storeParam) storeField.value = storeParam;
+    if (tenderedEl && tenderedParam) tenderedEl.textContent = parseFloat(tenderedParam).toFixed(2);
+    if (taxEl && taxParam) taxEl.textContent = parseFloat(taxParam).toFixed(2);
   });
-
-  document.addEventListener('paste', (e)=>{
-    const data = (e.clipboardData || window.clipboardData)?.getData('text');
-    if(data && data.length > 50){ 
-      e.preventDefault(); 
-      parseDashboard(data); 
-      const cat = $('#pasteCatcher');
-      cat.blur(); cat.style.left='-9999px'; cat.style.top='-9999px';
-    }
-  });
-
-  // First pass
-  applyStoreDefaults();
-  recalc();
-
-  // Export & print
-  function buildData(){
-    const store = $('#store')?.value||'Unknown';
-    const dt = $('#bizDate')?.value||'';
-    const cash = $('#cashTotal')?.value||'';
-    const debit = $('#debitTotal')?.value||'';
-    const cashback = $('#cashbackTotal')?.value||'';
-    const tax = $('#taxTotal')?.value||'';
-    const actual = $('#actual')?.textContent||'$0.00';
-    const expected = $('#expected')?.textContent||'$0.00';
-    const diff = $('#diff')?.textContent||'$0.00';
-    const payoutRows = Array.from(pbody?.querySelectorAll('tr')||[]).map(tr=>[
-      tr.children[0].querySelector('input')?.value||'',
-      tr.children[1].querySelector('input')?.value||'',
-    ]);
-    const shiftRows = Array.from(sbody?.querySelectorAll('tr')||[]).map((tr,i)=>[
-      i+1,
-      tr.children[1].querySelector('input')?.value||'',
-      tr.children[2].querySelector('input')?.value||'',
-      tr.children[3].querySelector('input')?.value||'',
-    ]);
-    const changeBag = $('#changeBag')?.value||'';
-    const changeNote = $('#changeNote')?.value||'';
-    return {store, dt, cash, debit, cashback, tax, payoutRows, shiftRows, actual, expected, diff, changeBag, changeNote};
-  }
-
-  function rowsToCSV(rows){
-    return rows.map(r=> r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\r\n');
-  }
-
-  $('#exportBtn')?.addEventListener('click', ()=>{
-    const D = buildData();
-
-    if (window.XLSX){
-      const wb = XLSX.utils.book_new();
-
-      const summary = [
-        ['Store', D.store],
-        ['Date', D.dt],
-        ['Entry Mode', (document.querySelector('#enterGross')?.checked ? 'Gross (Pre-Pull)' : 'Net (Post-Pull)')],
-        [],
-        ['POS Totals'],
-        ['Cash Total', D.cash],
-        ['Debit Total', D.debit],
-        ['Cashback Given', D.cashback],
-        ['Taxes', D.tax],
-        [],
-        ['Results'],
-        ['Gross Closing Cash (Σ Drop + Σ Coin ±)', document.querySelector('#grossCash')?.textContent || '$0.00'],
-        ['Actual Deposit', D.actual],
-        ['POS Expected Cash', D.expected],
-        ['Difference', D.diff],
-        [],
-        ['Change Bag (note only)', D.changeBag, D.changeNote],
-      ];
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(summary), 'Summary');
-
-      const shifts = [['#','Employee / Notes','Shift Cash Drop (bills)','Shift Coin ±'], ...D.shiftRows];
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(shifts), 'Shifts');
-
-      const payouts = [['Description','Amount'], ...D.payoutRows, ['Total Payouts', document.querySelector('#payoutSum')?.textContent||'$0.00']];
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(payouts), 'Payouts');
-
-      const fname = `DG-Deposit_${D.store}_${D.dt||'date'}.xlsx`.replace(/\s+/g,'-');
-      XLSX.writeFile(wb, fname);
-    } else {
-      const rows = [
-        ['DG Tools — Daily Deposit (v4.2)'],
-        ['Store', D.store],
-        ['Date', D.dt],
-        ['Entry Mode', (document.querySelector('#enterGross')?.checked ? 'Gross (Pre-Pull)' : 'Net (Post-Pull)')],
-        [],
-        ['POS Totals'],
-        ['Cash Total', D.cash],
-        ['Debit Total', D.debit],
-        ['Cashback Given', D.cashback],
-        ['Taxes', D.tax],
-        [],
-        ['Vendor Payouts / Bills'],
-        ['Description','Amount'],
-        ...D.payoutRows,
-        ['Total Payouts', document.querySelector('#payoutSum')?.textContent||'$0.00'],
-        [],
-        ['Shifts'],
-        ['#','Employee / Notes','Shift Cash Drop (bills)','Shift Coin ±'],
-        ...D.shiftRows,
-        [],
-        ['Change Bag (note only)', D.changeBag, D.changeNote],
-        [],
-        ['Results'],
-        ['Gross Closing Cash (Σ Drop + Σ Coin ±)', document.querySelector('#grossCash')?.textContent || '$0.00'],
-        ['Actual Deposit', D.actual],
-        ['POS Expected Cash', D.expected],
-        ['Difference', D.diff],
-      ];
-      const csv = rowsToCSV(rows);
-      const blob = new Blob([csv], {type:'text/csv'});
-      const name = `DG-Deposit_${D.store}_${D.dt||'date'}.csv`.replace(/\s+/g,'-');
-      const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click(); URL.revokeObjectURL(a.href);
-    }
-  });
-
-  $('#printBtn')?.addEventListener('click', ()=> window.print());
-});
 </script>
 
-<!-- To enable .xlsx export on GitHub Pages, include SheetJS (uncomment the next line): -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.2/dist/xlsx.full.min.js"></script> -->
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const storeField = document.getElementById('dd-venue');
+  const vendorList = document.getElementById('vendor-list');
+  const defaultVendors = {
+    "Foster": [
+      { desc: "Foster Rent", amount: 350 },
+      { desc: "Foster Bills", amount: 150 }
+    ],
+    "Division": [
+      { desc: "Division Rent", amount: 350 },
+      { desc: "Division Bills", amount: 150 }
+    ],
+    "Sandy": [
+      { desc: "Sandy Rent", amount: 350 },
+      { desc: "Sandy Bills", amount: 200 }
+    ]
+  };
+
+  function applyDefaults(store) {
+    const entries = defaultVendors[store] || [];
+    const rows = vendorList.querySelectorAll(".vendor-row");
+    rows.forEach((row, index) => {
+      const desc = row.querySelector(".vendor-desc");
+      const amount = row.querySelector(".vendor-amount");
+      if (index < entries.length) {
+        desc.value = entries[index].desc;
+        amount.value = entries[index].amount;
+      } else {
+        desc.value = "";
+        amount.value = 0;
+      }
+    });
+  }
+
+  if (storeField && storeField.value) {
+    applyDefaults(storeField.value);
+  }
+});
+</script>
 
 </body>
 </html>
