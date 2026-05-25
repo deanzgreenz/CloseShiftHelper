@@ -837,13 +837,26 @@ document.addEventListener('DOMContentLoaded', () => {
     data.push(['Total Payouts', num($('#payoutsSum').textContent)]);
     data.push(['', '']);
 
-    data.push(['----- Shifts -----', '']);
+data.push(['----- Shifts -----', '---- Cash Drop ----', '---- Coin Adjustment ----']);
+    
+    let exportDropTotal = 0;
+    let exportCoinTotal = 0;
+
     Array.from(shiftsBody.querySelectorAll('tr')).forEach((tr, i) => {
         const notes = tr.querySelector('td:nth-child(2) input')?.value || '';
         const drop = num(tr.querySelector('td:nth-child(3) input')?.value);
         const coin = num(tr.querySelector('td:nth-child(4) input')?.value);
+        
+        exportDropTotal += drop;
+        exportCoinTotal += coin;
+
         data.push([`Shift ${i+1}: ${notes}`, `Drop: ${fmt(drop)}`, `Coin: ${fmt(coin)}`]);
     });
+    
+    // Add the new totals row for the individual columns
+    data.push(['Totals:', exportDropTotal, exportCoinTotal]);
+    
+    // Keep the existing overall physical cash total
     data.push(['Total Physical Cash', num($('#grossCash').textContent)]);
     data.push(['', '']);
 
